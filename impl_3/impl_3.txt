@@ -1,0 +1,2 @@
+add image in state
+works for 0.1 step sizes

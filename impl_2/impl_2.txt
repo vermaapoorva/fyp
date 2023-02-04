@@ -1,0 +1,4 @@
+Added models+logs
+Changed starting position to +2 and goal distance to +1.0
+Changed actions from 1 unit to 0.01, training much more obvious
+Works in ...timesteps

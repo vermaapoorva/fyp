@@ -1,0 +1,2 @@
+This implementation performs PPO RL using the actual distance from the objects as the reward.
+The vision sensor isn't used.
