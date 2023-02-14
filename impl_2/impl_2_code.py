@@ -123,43 +123,43 @@ model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=logdir)
 
 # # ### Training models with different timesteps
 TIMESTEPS = 5000
-# for i in range(31):
-#     model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="PPO")
-#     model.save(f"{models_dir}/impl_2_{TIMESTEPS*i}")
+for i in range(31):
+    model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="PPO")
+    model.save(f"{models_dir}/impl_2_{TIMESTEPS*i}")
 
-# results = []
-# for i in range(1, 31):
-#     model_path = f"{models_dir}/impl_2_{TIMESTEPS*i}.zip"
-#     model = PPO.load(model_path, env=env)
-#     mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=5)
-#     print(i, mean_reward, std_reward)
-#     results.append([TIMESTEPS*i, mean_reward, std_reward])
+results = []
+for i in range(1, 31):
+    model_path = f"{models_dir}/impl_2_{TIMESTEPS*i}.zip"
+    model = PPO.load(model_path, env=env)
+    mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=5)
+    print(i, mean_reward, std_reward)
+    results.append([TIMESTEPS*i, mean_reward, std_reward])
 
-# print(results)
+print(results)
 
-model_path = f"{models_dir}/impl_2_150000.zip"
-model = PPO.load(model_path, env=env)
+# model_path = f"{models_dir}/impl_2_150000.zip"
+# model = PPO.load(model_path, env=env)
 
-episodes = 10000
+# episodes = 10000
 
-for ep in range(episodes):
-    obs = env.reset()
-    done = False
-    i = 0
+# for ep in range(episodes):
+#     obs = env.reset()
+#     done = False
+#     i = 0
     
-    while not done and i <= 500:
-        # pass observation to model to get predicted action
-        action, _states = model.predict(obs)
+#     while not done and i <= 500:
+#         # pass observation to model to get predicted action
+#         action, _states = model.predict(obs)
 
-        # pass action to env and get info back
-        obs, rewards, done, info = env.step(action)
+#         # pass action to env and get info back
+#         obs, rewards, done, info = env.step(action)
 
-        print(rewards)
+#         print(rewards)
 
-        # show the environment on the screen
-        env.render()
-        i += 1
+#         # show the environment on the screen
+#         env.render()
+#         i += 1
 
-    print(i)
+#     print(i)
 
 env.close()

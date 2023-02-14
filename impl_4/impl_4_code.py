@@ -19,22 +19,22 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
 from stable_baselines3.common.callbacks import BaseCallback
 	
-SCENE_FILE = join(dirname(abspath(__file__)), 'impl_3_scene.ttt')
+SCENE_FILE = join(dirname(abspath(__file__)), 'impl_4_scene.ttt')
 
 #################################################################################################
 ################################   SETTING UP THE ENVIRONMENT   #################################
 #################################################################################################
 
-class RobotEnv3(gym.Env):
+class RobotEnv4(gym.Env):
     """Custom Environment that follows gym interface"""
 
     def __init__(self):
-        super(RobotEnv3, self).__init__()
+        super(RobotEnv4, self).__init__()
         print("init")
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
-        self.action_space = spaces.Discrete(6)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(3,), dtype=float)
 
         # Example for using image as input (channel-first; channel-last also works):
         self.observation_space = spaces.Box(low=0, high=255,
@@ -43,7 +43,7 @@ class RobotEnv3(gym.Env):
         self.done = False
         self.pr = PyRep()
         # Launch the application with a scene file in headless mode
-        self.pr.launch(SCENE_FILE, headless=False) 
+        self.pr.launch(SCENE_FILE, headless=True) 
         self.pr.start()  # Start the simulation
 
         self.agent = VisionSensor("Camera")
@@ -62,22 +62,10 @@ class RobotEnv3(gym.Env):
 
         self.pr.step()
         self.step_number += 1
+        action_scale = 0.1
 
         new_x, new_y, new_z = self.agent.get_position()
-        if action == 0:
-            new_x += 0.01
-        elif action == 1:
-            new_x -= 0.01
-        elif action == 2:
-            new_y += 0.01
-        elif action == 3:
-            new_y -= 0.01
-        elif action == 4:
-            new_z += 0.01
-        elif action == 5:
-            new_z -= 0.01
-
-        self.agent.set_position([new_x, new_y, new_z])
+        self.agent.set_position([new_x + action_scale*action[0], new_y + action_scale*action[1], new_z + action_scale*action[2]])
 
         tx, ty, tz = self.target.get_position()
         reward = -np.sqrt((new_x - tx) ** 2 + (new_y - ty) ** 2 + (new_z - tz) ** 2)
@@ -92,7 +80,7 @@ class RobotEnv3(gym.Env):
         if self.step_number == 500:
             done = True
             self.step_number = 0
-
+        
         return self._get_state(), reward, done, {}
 
     def reset(self):
@@ -168,49 +156,48 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
 
 logdir = "logs"
-# tensorboard_log_dir = "tensorboard_logs"
+tensorboard_log_dir = "tensorboard_logs"
 
-env = RobotEnv3()
+env = RobotEnv4()
 env = Monitor(env, logdir)
 
-# if not os.path.exists(logdir):
-#     os.makedirs(logdir)
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
 
-# if not os.path.exists(tensorboard_log_dir):
-#     os.makedirs(tensorboard_log_dir)
+if not os.path.exists(tensorboard_log_dir):
+    os.makedirs(tensorboard_log_dir)
 
-# model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir)
-# model = PPO.load(os.path.join(logdir, "best_model.zip"), env=env)
+model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir)
 
-# # Create the callback: check every 1000 steps
-# callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
-# # Train the agent
-# timesteps = 10000000
-# model.learn(total_timesteps=int(timesteps), callback=callback)
-# plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
-# plt.show()
+# Create the callback: check every 1000 steps
+callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
+# Train the agent
+timesteps = 2000000
+model.learn(total_timesteps=int(timesteps), callback=callback)
+plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
+plt.show()
 
-model_path = f"{logdir}/best_model.zip"
-model = PPO.load(model_path, env=env)
+# model_path = f"{logdir}/best_model.zip"
+# model = PPO.load(model_path, env=env)
 
-episodes = 1000
+# episodes = 1000
 
-for ep in range(episodes):
-    obs = env.reset()
-    done = False
-    i = 0
+# for ep in range(episodes):
+#     obs = env.reset()
+#     done = False
+#     i = 0
     
-    while not done and i <= 500:
-        # pass observation to model to get predicted action
-        action, _states = model.predict(obs)
+#     while not done and i <= 500:
+#         # pass observation to model to get predicted action
+#         action, _states = model.predict(obs)
 
-        # pass action to env and get info back
-        obs, rewards, done, info = env.step(action)
+#         # pass action to env and get info back
+#         obs, rewards, done, info = env.step(action)
 
-        # show the environment on the screen
-        env.render()
-        i += 1
+#         # show the environment on the screen
+#         env.render()
+#         i += 1
 
-    print(i)
+#     print(i)
 
 env.close()
