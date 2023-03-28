@@ -251,5 +251,5 @@ def run_model():
         # print(i)
         print(np.mean(np.sum(episode_rewards)))
 
-# train()
-run_model()
+train()
+# run_model()
