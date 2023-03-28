@@ -1,4 +1,4 @@
-docs/
-*/logs
-*/tensorboard_logs
-*/__pycache__
+# docs/
+# */logs
+# */tensorboard_logs
+# */__pycache__

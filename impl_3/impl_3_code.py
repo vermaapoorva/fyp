@@ -4,6 +4,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 import os
 import cv2
+import time
 
 import numpy as np
 from os.path import dirname, join, abspath
@@ -28,7 +29,7 @@ SCENE_FILE = join(dirname(abspath(__file__)), 'impl_3_scene.ttt')
 class RobotEnv3(gym.Env):
     """Custom Environment that follows gym interface"""
 
-    def __init__(self):
+    def __init__(self, headless=True):
         super(RobotEnv3, self).__init__()
         print("init")
         # Define action and observation space
@@ -43,13 +44,14 @@ class RobotEnv3(gym.Env):
         self.done = False
         self.pr = PyRep()
         # Launch the application with a scene file in headless mode
-        self.pr.launch(SCENE_FILE, headless=False) 
+        self.pr.launch(SCENE_FILE, headless=headless) 
         self.pr.start()  # Start the simulation
 
         self.agent = VisionSensor("Camera")
         self.target = Object("Target")
         self.initial_agent_pos = self.agent.get_position()
         self.initial_target_pos = self.target.get_position()
+        print(self.initial_agent_pos)
         self.step_number = 0
 
     def _get_state(self):
@@ -92,6 +94,8 @@ class RobotEnv3(gym.Env):
         if self.step_number == 500:
             done = True
             self.step_number = 0
+
+        time.sleep(0.1)
 
         return self._get_state(), reward, done, {}
 
@@ -166,51 +170,57 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-
 logdir = "logs"
-# tensorboard_log_dir = "tensorboard_logs"
+tensorboard_log_dir = "tensorboard_logs"
 
-env = RobotEnv3()
-env = Monitor(env, logdir)
+def train():
 
-# if not os.path.exists(logdir):
-#     os.makedirs(logdir)
+    env = RobotEnv3()
+    env = Monitor(env, logdir)
 
-# if not os.path.exists(tensorboard_log_dir):
-#     os.makedirs(tensorboard_log_dir)
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
 
-# model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir)
-# model = PPO.load(os.path.join(logdir, "best_model.zip"), env=env)
+    if not os.path.exists(tensorboard_log_dir):
+        os.makedirs(tensorboard_log_dir)
 
-# # Create the callback: check every 1000 steps
-# callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
-# # Train the agent
-# timesteps = 10000000
-# model.learn(total_timesteps=int(timesteps), callback=callback)
-# plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
-# plt.show()
+    model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir)
 
-model_path = f"{logdir}/best_model.zip"
-model = PPO.load(model_path, env=env)
+    # Create the callback: check every 1000 steps
+    callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
+    # Train the agent
+    timesteps = 10000000
+    model.learn(total_timesteps=int(timesteps), callback=callback)
+    plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
+    plt.show()
 
-episodes = 1000
+def run_model():
 
-for ep in range(episodes):
-    obs = env.reset()
-    done = False
-    i = 0
-    
-    while not done and i <= 500:
-        # pass observation to model to get predicted action
-        action, _states = model.predict(obs)
+    env = RobotEnv3(False)
+    env = Monitor(env, logdir)
 
-        # pass action to env and get info back
-        obs, rewards, done, info = env.step(action)
+    model_path = f"{logdir}/best_model.zip"
+    model = PPO.load(model_path, env=env)
 
-        # show the environment on the screen
-        env.render()
-        i += 1
+    episodes = 1000
 
-    print(i)
+    for ep in range(episodes):
+        obs = env.reset()
+        done = False
+        i = 0
+        
+        while not done and i <= 500:
+            # pass observation to model to get predicted action
+            action, _states = model.predict(obs)
 
-env.close()
+            # pass action to env and get info back
+            obs, rewards, done, info = env.step(action)
+
+            # show the environment on the screen
+            env.render()
+            i += 1
+
+        print(i)
+
+# train()
+run_model()

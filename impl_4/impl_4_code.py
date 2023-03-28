@@ -4,6 +4,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 import os
 import cv2
+import time
 
 import numpy as np
 from os.path import dirname, join, abspath
@@ -28,7 +29,7 @@ SCENE_FILE = join(dirname(abspath(__file__)), 'impl_4_scene.ttt')
 class RobotEnv4(gym.Env):
     """Custom Environment that follows gym interface"""
 
-    def __init__(self):
+    def __init__(self, headless=True):
         super(RobotEnv4, self).__init__()
         print("init")
         # Define action and observation space
@@ -43,7 +44,7 @@ class RobotEnv4(gym.Env):
         self.done = False
         self.pr = PyRep()
         # Launch the application with a scene file in headless mode
-        self.pr.launch(SCENE_FILE, headless=True) 
+        self.pr.launch(SCENE_FILE, headless=headless) 
         self.pr.start()  # Start the simulation
 
         self.agent = VisionSensor("Camera")
@@ -62,7 +63,7 @@ class RobotEnv4(gym.Env):
 
         self.pr.step()
         self.step_number += 1
-        action_scale = 0.1
+        action_scale = 0.01
 
         new_x, new_y, new_z = self.agent.get_position()
         self.agent.set_position([new_x + action_scale*action[0], new_y + action_scale*action[1], new_z + action_scale*action[2]])
@@ -71,7 +72,7 @@ class RobotEnv4(gym.Env):
         reward = -np.sqrt((new_x - tx) ** 2 + (new_y - ty) ** 2 + (new_z - tz) ** 2)
 
         done = False
-        if new_x < -2.5 or new_x > 2.5 or new_y < -2.5 or new_y > 2.5 or new_z < 0 or new_z > 5:
+        if new_x < -2.5 or new_x > 2.5 or new_y < -2.5 or new_y > 2.5 or new_z < 0 or new_z > 2.5:
             done = True
             reward = -5000
         if reward > -1:
@@ -80,6 +81,8 @@ class RobotEnv4(gym.Env):
         if self.step_number == 500:
             done = True
             self.step_number = 0
+
+        # time.sleep(0.1)
         
         return self._get_state(), reward, done, {}
 
@@ -154,50 +157,57 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-
 logdir = "logs"
 tensorboard_log_dir = "tensorboard_logs"
 
-env = RobotEnv4()
-env = Monitor(env, logdir)
+def train():
 
-if not os.path.exists(logdir):
-    os.makedirs(logdir)
+    env = RobotEnv4()
+    env = Monitor(env, logdir)
 
-if not os.path.exists(tensorboard_log_dir):
-    os.makedirs(tensorboard_log_dir)
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
 
-model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir)
+    if not os.path.exists(tensorboard_log_dir):
+        os.makedirs(tensorboard_log_dir)
 
-# Create the callback: check every 1000 steps
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
-# Train the agent
-timesteps = 2000000
-model.learn(total_timesteps=int(timesteps), callback=callback)
-plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
-plt.show()
+    model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir)
 
-# model_path = f"{logdir}/best_model.zip"
-# model = PPO.load(model_path, env=env)
+    # Create the callback: check every 1000 steps
+    callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
+    # Train the agent
+    timesteps = 10000000
+    model.learn(total_timesteps=int(timesteps), callback=callback)
+    plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
+    plt.show()
 
-# episodes = 1000
+def run_model():
 
-# for ep in range(episodes):
-#     obs = env.reset()
-#     done = False
-#     i = 0
-    
-#     while not done and i <= 500:
-#         # pass observation to model to get predicted action
-#         action, _states = model.predict(obs)
+    env = RobotEnv4(False)
+    env = Monitor(env, logdir)
 
-#         # pass action to env and get info back
-#         obs, rewards, done, info = env.step(action)
+    model_path = f"{logdir}/best_model.zip"
+    model = PPO.load(model_path, env=env)
 
-#         # show the environment on the screen
-#         env.render()
-#         i += 1
+    episodes = 1000
 
-#     print(i)
+    for ep in range(episodes):
+        obs = env.reset()
+        done = False
+        i = 0
+        
+        while not done and i <= 500:
+            # pass observation to model to get predicted action
+            action, _states = model.predict(obs)
 
-env.close()
+            # pass action to env and get info back
+            obs, rewards, done, info = env.step(action)
+
+            # show the environment on the screen
+            env.render()
+            i += 1
+
+        print(i)
+
+# train()
+run_model()
