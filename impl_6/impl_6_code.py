@@ -13,7 +13,7 @@ from pyrep.objects import VisionSensor, Object, Camera
 
 import matplotlib.pyplot as plt
 
-from stable_baselines3 import TD3
+from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common import results_plotter
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
@@ -200,8 +200,8 @@ tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average f
 
 def train():
 
-    env = RobotEnv6()
-    env = Monitor(env, logdir)
+    env = make_vec_env(RobotEnv6, n_envs=2, monitor_dir=logdir)
+    # env = Monitor(env, logdir)
 
     if not os.path.exists(logdir):
         os.makedirs(logdir)
