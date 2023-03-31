@@ -14,6 +14,7 @@ from pyrep.objects import VisionSensor, Object, Camera
 import matplotlib.pyplot as plt
 
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common import results_plotter
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
@@ -193,6 +194,7 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
+# if __name__ == '__main__':
 
 logdir = "logs"
 tensorboard_log_dir = "tensorboard_logs"
@@ -200,7 +202,7 @@ tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average f
 
 def train():
 
-    env = make_vec_env(RobotEnv6, n_envs=2, monitor_dir=logdir)
+    env = make_vec_env(RobotEnv6, n_envs=10, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
     # env = Monitor(env, logdir)
 
     if not os.path.exists(logdir):
@@ -251,5 +253,6 @@ def run_model():
         # print(i)
         print(np.mean(np.sum(episode_rewards)))
 
-train()
-# run_model()
+if __name__ == '__main__':
+    train()
+    # run_model()
