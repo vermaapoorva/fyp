@@ -21,7 +21,7 @@ from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_r
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
-SCENE_FILE = join(dirname(abspath(__file__)), 'impl_6_scene.ttt')
+SCENE_FILE = join(dirname(abspath(__file__)), 'impl_6_scene_2.ttt')
 
 #################################################################################################
 ################################   SETTING UP THE ENVIRONMENT   #################################
@@ -49,11 +49,11 @@ class RobotEnv6(gym.Env):
         self.pr.launch(SCENE_FILE, headless=headless) 
         self.pr.start()  # Start the simulation
 
-        self.agent = VisionSensor("Camera")
-        self.target = Object("Target")
+        self.agent = VisionSensor("camera")
+        self.target = Object("target")
         self.initial_agent_pos = self.agent.get_position()
         self.initial_target_pos = self.target.get_position()
-        self.goal_pos = [0, 0.5, 0.5]
+        self.goal_pos = [0, 0, 1]
         self.step_number = 0
         
         self.agent.set_position(self.get_random_agent_pos())
@@ -113,9 +113,9 @@ class RobotEnv6(gym.Env):
         # y = np.random.uniform(1, 1.25)
         # z = np.random.uniform(0, 1)
         # Required range works, stored in PPO_2 + Average final reward_2
-        x = np.random.uniform(-0.25, 0.25)
-        y = np.random.uniform(1, 1.5)
-        z = np.random.uniform(0.5, 1)
+        x = np.random.uniform(-0.2, 0.2)
+        y = np.random.uniform(-0.25, 0.25)
+        z = np.random.uniform(1, 2)
         return [x, y, z]
 
 #################################################################################################
@@ -198,13 +198,13 @@ class AvgRewardCallback(BaseCallback):
 
 logdir = "logs"
 tensorboard_log_dir = "tensorboard_logs"
-tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_1")
+tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_2")
 
 def train():
 
-    # env = make_vec_env(RobotEnv6, n_envs=1, monitor_dir=logdir)
-    env = RobotEnv6()
-    env = Monitor(env, logdir)
+    env = make_vec_env(RobotEnv6, n_envs=10, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
+    # env = RobotEnv6()
+    # env = Monitor(env, logdir)
 
     if not os.path.exists(logdir):
         os.makedirs(logdir)
@@ -212,21 +212,21 @@ def train():
     if not os.path.exists(tensorboard_log_dir):
         os.makedirs(tensorboard_log_dir)
 
-    model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir, device='cuda')
+    model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
     avg_reward_callback = AvgRewardCallback()
 
     # Train the agent
-    timesteps = 50000000
+    timesteps = 500000000
     model.learn(total_timesteps=int(timesteps), callback=[save_best_model_callback, avg_reward_callback])
     plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
     plt.show()
 
 def run_model():
 
-    env = RobotEnv6()
+    env = RobotEnv6(False)
     env = Monitor(env, logdir)
 
     model_path = f"{logdir}/best_model.zip"
@@ -255,5 +255,5 @@ def run_model():
         print(np.mean(np.sum(episode_rewards)))
 
 if __name__ == '__main__':
-    # train()
-    run_model()
+    train()
+    # run_model()
