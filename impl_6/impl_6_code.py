@@ -202,8 +202,9 @@ tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average f
 
 def train():
 
-    env = make_vec_env(RobotEnv6, n_envs=10, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
-    # env = Monitor(env, logdir)
+    # env = make_vec_env(RobotEnv6, n_envs=1, monitor_dir=logdir)
+    env = RobotEnv6()
+    env = Monitor(env, logdir)
 
     if not os.path.exists(logdir):
         os.makedirs(logdir)
