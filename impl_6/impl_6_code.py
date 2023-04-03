@@ -78,7 +78,7 @@ class RobotEnv6(gym.Env):
         reward = -np.sqrt((new_x - tx) ** 2 + (new_y - ty) ** 2 + (new_z - tz) ** 2)
 
         done = False
-        if new_x < -2.5 or new_x > 2.5 or new_y < -2.5 or new_y > 2.5 or new_z < 0 or new_z > 2.5:
+        if new_x < -0.25 or new_x > 0.25 or new_y < -0.25 or new_y > 0.25 or new_z < 0.8 or new_z > 2:
             done = True
             reward = -5000
         if reward > -0.01:
@@ -106,13 +106,6 @@ class RobotEnv6(gym.Env):
         self.pr.shutdown()  # Close the application
 
     def get_random_agent_pos(self):
-        # full range to see object: x(-1.5, 1.5), y(1, 2.5), z(0, 1.3)
-        # required range: x 0.5, y 0.5, z 0.5-1
-        # These work, stored in PPO_1 + Average final reward_1
-        # x = np.random.uniform(-0.25, 0.25)
-        # y = np.random.uniform(1, 1.25)
-        # z = np.random.uniform(0, 1)
-        # Required range works, stored in PPO_2 + Average final reward_2
         x = np.random.uniform(-0.2, 0.2)
         y = np.random.uniform(-0.25, 0.25)
         z = np.random.uniform(1, 2)
@@ -136,7 +129,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.logdir = logdir
-        self.save_path = os.path.join(logdir, "best_model")
+        self.save_path = os.path.join(logdir, "best_model2")
         self.best_mean_reward = -np.inf
 
     def _init_callback(self) -> None:
@@ -196,9 +189,9 @@ class AvgRewardCallback(BaseCallback):
 
 # if __name__ == '__main__':
 
-logdir = "logs"
+logdir = "logs2"
 tensorboard_log_dir = "tensorboard_logs"
-tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_2")
+tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_3")
 
 def train():
 
@@ -229,7 +222,7 @@ def run_model():
     env = RobotEnv6(False)
     env = Monitor(env, logdir)
 
-    model_path = f"{logdir}/best_model.zip"
+    model_path = f"{logdir}/best_model2.zip"
     model = PPO.load(model_path, env=env)
 
     episodes = 1000
