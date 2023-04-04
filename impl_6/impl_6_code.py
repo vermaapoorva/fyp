@@ -80,10 +80,10 @@ class RobotEnv6(gym.Env):
         done = False
         if new_x < -0.25 or new_x > 0.25 or new_y < -0.25 or new_y > 0.25 or new_z < 0.8 or new_z > 2:
             done = True
-            reward = -5000
+            reward = -5
         if reward > -0.01:
             done = True
-            reward = 500
+            reward = 100
         if self.step_number == 500:
             done = True
             self.step_number = 0
@@ -129,7 +129,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.logdir = logdir
-        self.save_path = os.path.join(logdir, "best_model2")
+        self.save_path = os.path.join(logdir, "best_model3")
         self.best_mean_reward = -np.inf
 
     def _init_callback(self) -> None:
@@ -169,7 +169,7 @@ class AvgRewardCallback(BaseCallback):
     def _on_step(self) -> bool:
         if self.locals.get("dones")[0]:
             result = 0
-            if self.locals.get("rewards")[0] == 500:
+            if self.locals.get("rewards")[0] == 100:
                 result = 1
             tensorboard_callback.writer.add_scalar('Final reward', result, self.num_timesteps)
             self.results.append(result)
@@ -189,9 +189,9 @@ class AvgRewardCallback(BaseCallback):
 
 # if __name__ == '__main__':
 
-logdir = "logs2"
+logdir = "logs5"
 tensorboard_log_dir = "tensorboard_logs"
-tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_3")
+tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_6")
 
 def train():
 
@@ -222,7 +222,7 @@ def run_model():
     env = RobotEnv6(False)
     env = Monitor(env, logdir)
 
-    model_path = f"{logdir}/best_model2.zip"
+    model_path = f"{logdir}/best_model3.zip"
     model = PPO.load(model_path, env=env)
 
     episodes = 1000
