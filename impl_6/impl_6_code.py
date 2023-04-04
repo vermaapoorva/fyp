@@ -12,6 +12,8 @@ from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object, Camera
 
 import matplotlib.pyplot as plt
+import torch as th
+import torch.nn as nn
 
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -36,11 +38,11 @@ class RobotEnv6(gym.Env):
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
-        self.action_space = spaces.Box(low=-1, high=1, shape=(3,), dtype=float)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(3,), dtype=np.float32)
 
         # Example for using image as input (channel-first; channel-last also works):
         self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(36, 36, 3), dtype=np.uint8)
+                                            shape=(16, 16, 3), dtype=np.uint8)
 
         self.done = False
         self.pr = PyRep()
@@ -62,7 +64,13 @@ class RobotEnv6(gym.Env):
     def _get_state(self):
         # Return state containing image
         image = self.agent.capture_rgb()
-        resized = cv2.resize(image, (36, 36), interpolation = cv2.INTER_AREA)
+        resized = cv2.resize(image, (16, 16), interpolation = cv2.INTER_AREA)
+        resized = resized.astype(np.uint8)
+        cv2.imwrite("resized_image.jpg", resized)
+        #print("shape of image")
+        #print(resized.shape)
+        #print("type of image pixel vals")
+        #print(resized.dtype)
         return resized
 
     def step(self, action):
@@ -80,7 +88,7 @@ class RobotEnv6(gym.Env):
         done = False
         if new_x < -0.25 or new_x > 0.25 or new_y < -0.25 or new_y > 0.25 or new_z < 0.8 or new_z > 2:
             done = True
-            reward = -5
+            reward = -10
         if reward > -0.01:
             done = True
             reward = 100
@@ -110,6 +118,43 @@ class RobotEnv6(gym.Env):
         y = np.random.uniform(-0.25, 0.25)
         z = np.random.uniform(1, 2)
         return [x, y, z]
+
+#################################################################################################
+#################################################################################################
+#################################################################################################
+
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+
+class CustomCNN(BaseFeaturesExtractor):
+    """
+    :param observation_space: (gym.Space)
+    :param features_dim: (int) Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    """
+
+    def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
+        super().__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        n_input_channels = observation_space.shape[0]
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with th.no_grad():
+            n_flatten = self.cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        return self.linear(self.cnn(observations))
 
 #################################################################################################
 ##########################################   CALLBACK   #########################################
@@ -189,13 +234,13 @@ class AvgRewardCallback(BaseCallback):
 
 # if __name__ == '__main__':
 
-logdir = "logs5"
+logdir = "logs7"
 tensorboard_log_dir = "tensorboard_logs"
-tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_6")
+tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_8")
 
 def train():
 
-    env = make_vec_env(RobotEnv6, n_envs=10, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
+    env = make_vec_env(RobotEnv6, n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
     # env = RobotEnv6()
     # env = Monitor(env, logdir)
 
@@ -205,7 +250,14 @@ def train():
     if not os.path.exists(tensorboard_log_dir):
         os.makedirs(tensorboard_log_dir)
 
-    model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir)
+    #policy_kwargs = dict(activation_fn=th.nn.ReLU,
+     #                net_arch=dict(pi=[16, 16], vf=[16, 16]))
+    policy_kwargs = dict(
+        features_extractor_class=CustomCNN,
+        features_extractor_kwargs=dict(features_dim=128),
+    )
+
+    model = PPO('CnnPolicy', env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
