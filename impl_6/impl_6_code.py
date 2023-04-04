@@ -36,7 +36,7 @@ class RobotEnv6(gym.Env):
     def __init__(self, headless=True):
         super(RobotEnv6, self).__init__()
         print("init")
-        self.image_size = 128
+        self.image_size = 64
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
@@ -82,7 +82,7 @@ class RobotEnv6(gym.Env):
 
         tx, ty, tz = self.goal_pos
         reward = -np.sqrt((new_x - tx) ** 2 + (new_y - ty) ** 2 + (new_z - tz) ** 2)
-
+        # print(reward, new_x + action_scale*action[0], new_y + action_scale*action[1], new_z + action_scale*action[2])
         done = False
         if new_x < -0.25 or new_x > 0.25 or new_y < -0.25 or new_y > 0.25 or new_z < 0.8 or new_z > 2:
             done = True
@@ -175,7 +175,7 @@ class AvgRewardCallback(BaseCallback):
     def _on_step(self) -> bool:
         if self.locals.get("dones")[0]:
             result = 0
-            if self.locals.get("rewards")[0] == 100:
+            if self.locals.get("rewards")[0] == 200:
                 result = 1
             tensorboard_callback.writer.add_scalar('Final reward', result, self.num_timesteps)
             self.results.append(result)
@@ -193,14 +193,14 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 3
+iter = 4
 logdir = "logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
 
 def train():
 
-    env = make_vec_env(RobotEnv6, n_envs=4, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
+    env = make_vec_env(RobotEnv6, n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
     # env = RobotEnv6()
     # env = Monitor(env, logdir)
 
