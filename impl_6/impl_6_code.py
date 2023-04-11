@@ -12,6 +12,7 @@ from os.path import dirname, join, abspath
 from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object, Camera
 
+import time
 import matplotlib.pyplot as plt
 import torch as th
 import torch.nn as nn
@@ -33,10 +34,11 @@ SCENE_FILE = join(dirname(abspath(__file__)), 'impl_6_scene_2.ttt')
 class RobotEnv6(gym.Env):
     """Custom Environment that follows gym interface"""
 
-    def __init__(self, headless=True):
+    def __init__(self, headless=True, image_size=64, sleep=0):
         super(RobotEnv6, self).__init__()
         print("init")
-        self.image_size = 64
+        self.image_size = image_size
+        self.sleep = sleep
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
@@ -93,6 +95,10 @@ class RobotEnv6(gym.Env):
         if self.step_number == 500:
             done = True
             self.step_number = 0
+
+        time.sleep(self.sleep)
+        if done:
+            time.sleep(self.sleep * 100)
         
         return self._get_state(), reward, done, {}
 
@@ -226,7 +232,7 @@ def train():
 
 def run_model():
 
-    env = RobotEnv6(False)
+    env = RobotEnv6(headless=False, image_size=64, sleep=0.01)
     env = Monitor(env, logdir)
 
     model_path = f"{logdir}/best_model.zip"
@@ -255,5 +261,5 @@ def run_model():
         print(np.mean(np.sum(episode_rewards)))
 
 if __name__ == '__main__':
-    train()
-    # run_model()
+    # train()
+    run_model()
