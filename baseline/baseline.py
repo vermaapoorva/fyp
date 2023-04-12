@@ -1,21 +1,34 @@
+# import tensorflow as tf
 import numpy as np
+import os
 from tensorflow import keras
 import cv2
 
-from sklearn.model_selection import train_test_split
+print("import 1")
 
+from sklearn.model_selection import train_test_split
 import numpy as np
+
+print("import 2")
+
 from PIL import Image
 from os.path import dirname, join, abspath
+
+print("import 3")
 
 import matplotlib.pyplot as plt
 
 from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object, Camera
 
+print("import 4")
+
 import time
 
 SCENE_FILE = join(dirname(abspath(__file__)), 'baseline_scene.ttt')
+
+# print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+# tf.debugging.set_log_device_placement(True)
 
 #################################################################################################
 ################################   SETTING UP THE ENVIRONMENT   #################################
@@ -129,6 +142,8 @@ class RobotEnvBaseline():
 ####################################   TRAINING THE MODEL   #####################################
 #################################################################################################
 
+checkpoint_path = "model_1_checkpoint.ckpt"
+
 def collect_data():
     env = RobotEnvBaseline(headless=True, image_size=64)
 
@@ -167,7 +182,7 @@ def collect_data():
     #     img = Image.fromarray(x_train[i], 'RGB')
     #     img.save("x_train_" + str(i) + ".jpg")
 
-def train_model():
+def create_model():
     # Define the input shape of the images
     input_shape = (64, 64, 3)
 
@@ -190,6 +205,12 @@ def train_model():
     # Compile the model with a loss function and optimizer
     model.compile(loss='mse', optimizer='adam')
 
+    return model
+
+def train_model():
+
+    model = create_model()
+    
     # Load the dataset
     x_train = np.load('x_train.npy') # input images
     y_train = np.load('y_train.npy') # output 3x1 column matrices
@@ -202,8 +223,16 @@ def train_model():
 
     x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2, random_state=42)
 
+    checkpoint_dir = os.path.dirname(checkpoint_path)
+
+    # Create a callback that saves the model's weights
+    cp_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
+                                                 save_weights_only=True,
+                                                 verbose=1)
+
+    
     # Train the neural network on the dataset
-    history = model.fit(x_train, y_train, epochs=100, batch_size=512, validation_data=(x_val, y_val))
+    history = model.fit(x_train, y_train, epochs=100, batch_size=512, validation_data=(x_val, y_val), callbacks=[cp_callback])
 
     # Plot the training and validation loss
     plt.plot(history.history['loss'][2:])
@@ -225,10 +254,32 @@ def train_model():
 
 def evaluate_model():
     # Load the trained model
-    model = keras.models.load_model('model.h5')
+    print("Loading model")
+    model = create_model()
     env = RobotEnvBaseline(headless=True, image_size=64)
 
+    print("Loading data")
+    # Load the dataset                                                                                                                                                                                
+    x_train = np.load('x_train.npy') # input images                                                                                                                                                   
+    y_train = np.load('y_train.npy') # output 3x1 column matrices                                                                                                                                      
+    # Preprocess the dataset                                                                                                                                                                      
+    x_train = x_train.astype('float32') / 255
+
+    x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2, random_state=42)
+
+    print("Evaluating model")
+    loss, acc = model.evaluate(x_test, y_test, verbose=2)
+    print("Untrained model, accuracy: {:5.2f}%".format(100 * acc))
+
+    # Loads the weights
+    model.load_weights(checkpoint_path)
+
+    # Re-evaluate the model
+    loss, acc = model.evaluate(x_test, y_test, verbose=2)
+    print("Restored model, accuracy: {:5.2f}%".format(100 * acc))
+    
     # Evaluate the trained model
+    print("Calculating accuracy of model")
     accuracy = 0
     dists_when_reached_target = np.array([])
     while len(dists_when_reached_target) < 100:
@@ -236,7 +287,7 @@ def evaluate_model():
         done = False
         completed = False
         while not done:
-            state = np.expand_dims(state, axis=0)      
+            state = np.expand_dims(state, axis=0)
             action = model.predict(state)
             state, done, _, completed = env.step(action[0])
 
@@ -250,6 +301,6 @@ def evaluate_model():
     accuracy = np.mean(dists_when_reached_target)
     print("Average distance to target: ", accuracy)
 
-collect_data()
+# collect_data()
 # train_model()
-# evaluate_model()
+evaluate_model()
