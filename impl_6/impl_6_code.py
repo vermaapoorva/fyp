@@ -25,7 +25,7 @@ from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_r
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
-SCENE_FILE = join(dirname(abspath(__file__)), 'impl_6_scene_2.ttt')
+SCENE_FILE = join(dirname(abspath(__file__)), 'impl_6_scene.ttt')
 
 #################################################################################################
 ################################   SETTING UP THE ENVIRONMENT   #################################
@@ -79,19 +79,21 @@ class RobotEnv6(gym.Env):
         self.step_number += 1
         action_scale = 0.01
 
-        new_x, new_y, new_z = self.agent.get_position()
-        self.agent.set_position([new_x + action_scale*action[0], new_y + action_scale*action[1], new_z + action_scale*action[2]])
+        new_x, new_y, new_z = self.agent.get_position() + action_scale*action
+
+        # If within range, move
+        if new_x > -0.25 and new_x < 0.25 and new_y > -0.25 and new_y < 0.25 and new_z > 0.8 and new_z < 2:
+            self.agent.set_position([new_x, new_y, new_z])
 
         tx, ty, tz = self.goal_pos
         reward = -np.sqrt((new_x - tx) ** 2 + (new_y - ty) ** 2 + (new_z - tz) ** 2)
-        # print(reward, new_x + action_scale*action[0], new_y + action_scale*action[1], new_z + action_scale*action[2])
+
         done = False
-        if new_x < -0.25 or new_x > 0.25 or new_y < -0.25 or new_y > 0.25 or new_z < 0.8 or new_z > 2:
-            done = True
-            reward = -10
+        info = {}
         if reward > -0.01:
             done = True
             reward = 200
+            info.update({"success": True})
         if self.step_number == 500:
             done = True
             self.step_number = 0
@@ -100,7 +102,7 @@ class RobotEnv6(gym.Env):
         if done:
             time.sleep(self.sleep * 100)
         
-        return self._get_state(), reward, done, {}
+        return self._get_state(), reward, done, info
 
     def reset(self):
         # state = self._get_state()
@@ -122,6 +124,11 @@ class RobotEnv6(gym.Env):
         y = np.random.uniform(-0.25, 0.25)
         z = np.random.uniform(1, 2)
         return [x, y, z]
+    
+    def get_distance_to_goal(self):
+        x, y, z = self.agent.get_position()
+        tx, ty, tz = self.goal_pos
+        return np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
 
 #################################################################################################
 ##########################################   CALLBACK   #########################################
@@ -232,20 +239,22 @@ def train():
 
 def run_model():
 
-    env = RobotEnv6(headless=False, image_size=64, sleep=0.01)
+    env = RobotEnv6(headless=True, image_size=64, sleep=0)
     env = Monitor(env, logdir)
 
     model_path = f"{logdir}/best_model.zip"
     model = PPO.load(model_path, env=env)
 
-    episodes = 1000
-
-    for ep in range(episodes):
+    total_episodes = 0
+    successful_episodes = 0
+    distances_to_goal = []
+    while total_episodes < 100:
         obs = env.reset()
         done = False
-        i = 0
         episode_rewards = []
-        while not done and i <= 500:
+        total_episodes += 1
+
+        while not done:
             # pass observation to model to get predicted action
             action, _states = model.predict(obs)
 
@@ -255,10 +264,19 @@ def run_model():
 
             # show the environment on the screen
             env.render()
-            i += 1
 
-        # print(i)
-        print(np.mean(np.sum(episode_rewards)))
+        distance_to_goal = env.get_distance_to_goal()
+
+        if info.get("success"):
+            successful_episodes += 1
+            print(f"Episode {total_episodes} successful! Distance to goal: {distance_to_goal}")
+        
+        distances_to_goal.append(distance_to_goal)
+
+    print(f"Number of successful episodes: {successful_episodes}")
+    print(f"Number of total episodes: {total_episodes}")
+    print(f"Accuracy = Average distance to goal for valid episodes: {np.mean(distances_to_goal)}")
+    print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
     # train()

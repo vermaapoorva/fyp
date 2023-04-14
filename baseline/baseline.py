@@ -80,7 +80,7 @@ class RobotEnvBaseline():
         new_x, new_y, new_z = self.agent.get_position() + action_scale*action
         # If out of bounds, done = True
         if new_x < -0.25 or new_x > 0.25 or new_y < -0.25 or new_y > 0.25 or new_z < 0.8 or new_z > 2:
-            # print("Out of bounds")
+            print("Out of bounds")
             self.done = True
 
         # If reached height of target, done = True        
@@ -253,30 +253,30 @@ def train_model():
     model.save('model.h5')
 
 def evaluate_model():
-    # Load the trained model
-    print("Loading model")
+    # # Load the trained model
+    # print("Loading model")
     model = create_model()
     env = RobotEnvBaseline(headless=True, image_size=64)
 
-    print("Loading data")
-    # Load the dataset                                                                                                                                                                                
-    x_train = np.load('x_train.npy') # input images                                                                                                                                                   
-    y_train = np.load('y_train.npy') # output 3x1 column matrices                                                                                                                                      
-    # Preprocess the dataset                                                                                                                                                                      
-    x_train = x_train.astype('float32') / 255
+    # print("Loading data")
+    # # Load the dataset                                                                                                                                                                                
+    # x_train = np.load('x_train.npy') # input images                                                                                                                                                   
+    # y_train = np.load('y_train.npy') # output 3x1 column matrices                                                                                                                                      
+    # # Preprocess the dataset                                                                                                                                                                      
+    # x_train = x_train.astype('float32') / 255
 
-    x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2, random_state=42)
+    # x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2, random_state=42)
 
-    print("Evaluating model")
-    loss, acc = model.evaluate(x_test, y_test, verbose=2)
-    print("Untrained model, accuracy: {:5.2f}%".format(100 * acc))
+    # print("Evaluating model")
+    # loss, acc = model.evaluate(x_test, y_test, verbose=2)
+    # print("Untrained model, accuracy: {:5.2f}%".format(100 * acc))
 
     # Loads the weights
     model.load_weights(checkpoint_path)
 
-    # Re-evaluate the model
-    loss, acc = model.evaluate(x_test, y_test, verbose=2)
-    print("Restored model, accuracy: {:5.2f}%".format(100 * acc))
+    # # Re-evaluate the model
+    # loss, acc = model.evaluate(x_test, y_test, verbose=2)
+    # print("Restored model, accuracy: {:5.2f}%".format(100 * acc))
     
     # Evaluate the trained model
     print("Calculating accuracy of model")
