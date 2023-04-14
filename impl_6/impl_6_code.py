@@ -206,7 +206,7 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 6
+iter = 7
 logdir = "logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
@@ -225,7 +225,7 @@ def train():
 
     policy_kwargs = dict(net_arch=dict(pi=[128, 128, 128], vf=[128, 128, 128]))
         
-    model = PPO('CnnPolicy', env, batch_size=2048, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = PPO('CnnPolicy', env, batch_size=512, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
@@ -279,5 +279,5 @@ def run_model():
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
-    # train()
-    run_model()
+    train()
+    # run_model()
