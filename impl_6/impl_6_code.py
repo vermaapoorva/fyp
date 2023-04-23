@@ -206,7 +206,7 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 7
+iter = 6
 logdir = "logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
@@ -239,7 +239,7 @@ def train():
 
 def run_model():
 
-    env = RobotEnv6(headless=True, image_size=64, sleep=0)
+    env = RobotEnv6(headless=False, image_size=64, sleep=0)
     env = Monitor(env, logdir)
 
     model_path = f"{logdir}/best_model.zip"
@@ -279,5 +279,5 @@ def run_model():
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
-    train()
-    # run_model()
+    # train()
+    run_model()
