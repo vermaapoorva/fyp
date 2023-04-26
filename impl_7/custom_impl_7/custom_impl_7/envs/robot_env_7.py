@@ -6,13 +6,15 @@ import numpy as np
 
 from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object
+from os.path import dirname, join, abspath
 
 import time
+SCENE_FILE = join(dirname(abspath(__file__)), 'impl_7_scene.ttt')
 
 class RobotEnv7(gym.Env):
     """Custom Environment that follows gym interface"""
 
-    def __init__(self, scene_file, headless=True, image_size=64, sleep=0):
+    def __init__(self, headless=True, image_size=64, sleep=0):
         super(RobotEnv7, self).__init__()
         print("init")
         self.image_size = image_size
@@ -22,12 +24,12 @@ class RobotEnv7(gym.Env):
         # Example when using discrete actions:
         self.action_space = spaces.Box(low=-1, high=1, shape=(3,), dtype=np.float32)
         self.observation_space = spaces.Box(low=0, high=255,
-                                            shape=(self.image_size, self.image_size*2, 3), dtype=np.uint8)
+                                            shape=(3, self.image_size, self.image_size*2), dtype=np.uint8)
 
         self.done = False
         self.pr = PyRep()
         # Launch the application with a scene file in headless mode
-        self.pr.launch(scene_file, headless=headless) 
+        self.pr.launch(SCENE_FILE, headless=headless) 
         self.pr.start()  # Start the simulation
 
         self.agent = VisionSensor("camera")
@@ -46,7 +48,8 @@ class RobotEnv7(gym.Env):
         return self._get_current_image()
 
     def _get_state(self):
-        return np.concatenate((self._get_current_image(), self.goal_image), axis=1)
+        state = np.concatenate((self._get_current_image(), self.goal_image), axis=1)
+        return state.transpose(2, 0, 1)
 
     def _get_current_image(self):
         image = self.agent.capture_rgb()
