@@ -112,7 +112,7 @@ tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average f
 
 def train():
 
-    env = make_vec_env("RobotEnv7-v0", n_envs=12, vec_env_cls=SubprocVecEnv, monitor_dir=logdir, env_kwargs={'scene_file': SCENE_FILE})
+    env = make_vec_env("RobotEnv7-v0", n_envs=12, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
     # env = gym.make("RobotEnv7-v0", scene_file=SCENE_FILE)
     # env = Monitor(env, logdir)
 

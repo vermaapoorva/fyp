@@ -27,11 +27,11 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
 import custom_impl_7
 
 N_TRIALS = 100
-N_STARTUP_TRIALS = 5
-N_EVALUATIONS = 1
-N_TIMESTEPS = int(2)
+N_STARTUP_TRIALS = 0
+N_EVALUATIONS = 5
+N_TIMESTEPS = int(5e5)
 EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
-N_EVAL_EPISODES = 3
+N_EVAL_EPISODES = 2
 
 ENV_ID = "RobotEnv7-v0"
 
@@ -41,42 +41,43 @@ DEFAULT_HYPERPARAMS = {
 
 def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters."""
-    # gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
-    # max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
-    # gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
-    n_steps = 2 ** trial.suggest_int("exponent_n_steps", 14, 15)
+    gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
+    max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
+    gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
+    n_steps = 2 ** trial.suggest_int("exponent_n_steps", 8, 14)
     learning_rate = trial.suggest_float("lr", 1e-5, 1, log=True)
     batch_size = 2 ** trial.suggest_int("batch_size", 7, 13)
-    # ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
-    # ortho_init = trial.suggest_categorical("ortho_init", [False, True])
-    net_arch = trial.suggest_categorical("net_arch", ["small"])
-    # activation_fn = trial.suggest_categorical("activation_fn", ["tanh", "relu"])
+    ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
+    ortho_init = trial.suggest_categorical("ortho_init", [False, True])
+    net_arch = trial.suggest_categorical("net_arch", ["small", "medium", "large"])
+    activation_fn = trial.suggest_categorical("activation_fn", ["tanh", "relu"])
 
     # Display true values.
-    # trial.set_user_attr("gamma_", gamma)
-    # trial.set_user_attr("gae_lambda_", gae_lambda)
+    trial.set_user_attr("gamma_", gamma)
+    trial.set_user_attr("gae_lambda_", gae_lambda)
     trial.set_user_attr("n_steps", n_steps)
 
-    # net_arch = [
-    #     {"pi": [128, 256, 512, 256, 128], "vf": [128, 256, 512, 256, 128]} if net_arch == "small" else {"pi": [64, 64], "vf": [64, 64]}
-    # ]
+    if net_arch == "small":
+        net_arch = [{"pi": [128, 128, 128], "vf": [128, 128, 128]}]
+    elif net_arch == "medium":
+        net_arch = [{"pi": [128, 256, 256, 128], "vf": [128, 256, 256, 128]}]
+    else:
+        net_arch = dict(pi=[128, 256, 512, 256, 128], vf=[128, 256, 512, 256, 128])
 
-    net_arch=dict(pi=[128, 256, 512, 256, 128], vf=[128, 256, 512, 256, 128])
-
-    # activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU}[activation_fn]
+    activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU}[activation_fn]
 
     params = {
         "n_steps": n_steps,
-        # "gamma": gamma,
-        # "gae_lambda": gae_lambda,
+        "gamma": gamma,
+        "gae_lambda": gae_lambda,
         "learning_rate": learning_rate,
         "batch_size": batch_size,
-        # "ent_coef": ent_coef,
-        # "max_grad_norm": max_grad_norm,
+        "ent_coef": ent_coef,
+        "max_grad_norm": max_grad_norm,
         "policy_kwargs": {
             "net_arch": net_arch,
-            # "activation_fn": activation_fn,
-            # "ortho_init": ortho_init,
+            "activation_fn": activation_fn,
+            "ortho_init": ortho_init,
         },
     }
 
@@ -125,7 +126,9 @@ def objective(trial: optuna.Trial) -> float:
     kwargs.update(sample_ppo_params(trial))
     # Create the RL model.
 
-    env = make_vec_env(ENV_ID, n_envs=16, vec_env_cls=SubprocVecEnv)
+    #env = make_vec_env(ENV_ID, n_envs=1, vec_env_cls=SubprocVecEnv)
+    env = SubprocVecEnv([lambda : gym.make('RobotEnv7-v0') for _ in range(1)])
+
     model = PPO(env = env, **kwargs)
     # Create env used for evaluation.
     # eval_env = Monitor(gym.make(ENV_ID))
