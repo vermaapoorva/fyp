@@ -1,5 +1,5 @@
 """ Optuna example that optimizes the hyperparameters of
-a reinforcement learning agent using PPO implementation from Stable-Baselines3
+65;6800;1c65;6800;1ca reinforcement learning agent using PPO implementation from Stable-Baselines3
 on an OpenAI Gym environment.
 
 This is a simplified version of what can be found in https://github.com/DLR-RM/rl-baselines3-zoo.
@@ -45,13 +45,14 @@ def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
     max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
     gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
     n_steps = 2 ** trial.suggest_int("exponent_n_steps", 8, 14)
-    learning_rate = trial.suggest_float("lr", 1e-5, 1, log=True)
-    batch_size = 2 ** trial.suggest_int("batch_size", 7, 13)
+    learning_rate = trial.suggest_float("lr", 5e-6, 0.003)
+    batch_size = 2 ** trial.suggest_int("exponent_batch_size", 11, 11)
+    print("batch_size", batch_size)
     ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
-    net_arch = trial.suggest_categorical("net_arch", ["small", "medium", "large"])
+    net_arch = trial.suggest_categorical("net_arch", ["large"])
     activation_fn = trial.suggest_categorical("activation_fn", ["tanh", "relu"])
-
+    
     # Display true values.
     trial.set_user_attr("gamma_", gamma)
     trial.set_user_attr("gae_lambda_", gae_lambda)
@@ -67,17 +68,17 @@ def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
     activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU}[activation_fn]
 
     params = {
-        "n_steps": n_steps,
-        "gamma": gamma,
-        "gae_lambda": gae_lambda,
-        "learning_rate": learning_rate,
+#        "n_steps": n_steps,
+#        "gamma": gamma,
+#        "gae_lambda": gae_lambda,
+#        "learning_rate": learning_rate,
         "batch_size": batch_size,
-        "ent_coef": ent_coef,
-        "max_grad_norm": max_grad_norm,
+#        "ent_coef": ent_coef,
+#        "max_grad_norm": max_grad_norm,
         "policy_kwargs": {
             "net_arch": net_arch,
-            "activation_fn": activation_fn,
-            "ortho_init": ortho_init,
+#            "activation_fn": activation_fn,
+#            "ortho_init": ortho_init,
         },
     }
 
@@ -127,12 +128,12 @@ def objective(trial: optuna.Trial) -> float:
     # Create the RL model.
 
     #env = make_vec_env(ENV_ID, n_envs=1, vec_env_cls=SubprocVecEnv)
-    env = SubprocVecEnv([lambda : gym.make('RobotEnv7-v0') for _ in range(1)])
+    env = SubprocVecEnv([lambda : gym.make('RobotEnv7-v0') for _ in range(16)])
 
     model = PPO(env = env, **kwargs)
     # Create env used for evaluation.
     # eval_env = Monitor(gym.make(ENV_ID))
-    log_dir = "logs_hp_2"
+    log_dir = "logs_hp"
     eval_env = SubprocVecEnv([lambda : Monitor(gym.make('RobotEnv7-v0'), log_dir) for _ in range(1)])
 
     # Create the callback that will periodically evaluate and report the performance.

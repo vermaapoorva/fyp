@@ -105,7 +105,7 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 1
+iter = 9
 logdir = "logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
@@ -136,10 +136,9 @@ def train():
     plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
     plt.show()
 
-# def run_model():
+def run_model():
 
-    env = RobotEnv7(headless=False, image_size=64, sleep=0)
-    env = Monitor(env, logdir)
+    env = Monitor(gym.make("RobotEnv7-v0", headless=True, image_size=64, sleep=0), logdir)
 
     model_path = f"{logdir}/best_model.zip"
     model = PPO.load(model_path, env=env)
@@ -148,7 +147,7 @@ def train():
     successful_episodes = 0
     distances_to_goal = []
     while total_episodes < 100:
-        obs = env.reset()
+        obs, _ = env.reset()
         done = False
         episode_rewards = []
         total_episodes += 1
@@ -158,7 +157,7 @@ def train():
             action, _states = model.predict(obs)
 
             # pass action to env and get info back
-            obs, reward, done, info = env.step(action)
+            obs, reward, done, truncated, info = env.step(action)
             episode_rewards.append(reward)
 
             # show the environment on the screen
@@ -178,5 +177,5 @@ def train():
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
-    train()
-    # run_model()
+    # train()
+    run_model()

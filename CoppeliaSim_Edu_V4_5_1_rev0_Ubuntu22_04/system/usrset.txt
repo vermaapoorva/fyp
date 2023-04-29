@@ -182,3 +182,5 @@ xmlExportKnownFormats = true // true=if several files are generated, mesh and im
 // License
 // =================================================
 license = 
+
+allowOldEduRelease=7501
