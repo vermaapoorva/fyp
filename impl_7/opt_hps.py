@@ -1,5 +1,5 @@
 """ Optuna example that optimizes the hyperparameters of
-65;6800;1c65;6800;1ca reinforcement learning agent using PPO implementation from Stable-Baselines3
+a reinforcement learning agent using PPO implementation from Stable-Baselines3
 on an OpenAI Gym environment.
 
 This is a simplified version of what can be found in https://github.com/DLR-RM/rl-baselines3-zoo.
@@ -29,7 +29,7 @@ import custom_impl_7
 N_TRIALS = 100
 N_STARTUP_TRIALS = 0
 N_EVALUATIONS = 5
-N_TIMESTEPS = int(5e5)
+N_TIMESTEPS = int(1e3)
 EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
 N_EVAL_EPISODES = 2
 
@@ -128,7 +128,7 @@ def objective(trial: optuna.Trial) -> float:
     # Create the RL model.
 
     #env = make_vec_env(ENV_ID, n_envs=1, vec_env_cls=SubprocVecEnv)
-    env = SubprocVecEnv([lambda : gym.make('RobotEnv7-v0') for _ in range(16)])
+    env = SubprocVecEnv([lambda : gym.make('RobotEnv7-v0') for _ in range(2)])
 
     model = PPO(env = env, **kwargs)
     # Create env used for evaluation.
@@ -143,7 +143,7 @@ def objective(trial: optuna.Trial) -> float:
 
     nan_encountered = False
     try:
-        model.learn(N_TIMESTEPS, callback=eval_callback)
+        model.learn(N_TIMESTEPS, callback=eval_callback, progress_bar=True)
     except AssertionError as e:
         # Sometimes, random hyperparams can generate NaN.
         print(e)
