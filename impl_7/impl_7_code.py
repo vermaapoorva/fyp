@@ -105,14 +105,14 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 9
+iter = 10
 logdir = "logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
 
 def train():
 
-    env = make_vec_env("RobotEnv7-v0", n_envs=12, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
+    env = make_vec_env("RobotEnv7-v0", n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
     # env = gym.make("RobotEnv7-v0", scene_file=SCENE_FILE)
     # env = Monitor(env, logdir)
 
@@ -122,9 +122,57 @@ def train():
     if not os.path.exists(tensorboard_log_dir):
         os.makedirs(tensorboard_log_dir)
 
-    policy_kwargs = dict(net_arch=dict(pi=[128, 128, 128], vf=[128, 128, 128]))
-        
-    model = PPO('CnnPolicy', env, batch_size=512, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    # policy_kwargs = dict(net_arch=dict(pi=[128, 128, 128], vf=[128, 128, 128]))
+    
+    # parameters: {'gamma': 0.0008345698046059239,
+    #              'max_grad_norm': 0.32642320598728214,
+    #              'gae_lambda': 0.0054705510876348375,
+    #              'exponent_n_steps': 12, 'lr': 0.0009719718719738601,
+    #              'exponent_batch_size': 9,
+    #              'ent_coef': 1.4257709536587286e-06,
+    #              'ortho_init': True,
+    #              'net_arch': 'small',
+    #              'activation_fn': 'tanh'}
+
+    gamma = 1.0 - 0.0008345698046059239
+    max_grad_norm = 0.32642320598728214
+    gae_lambda = 1.0 - 0.0054705510876348375
+    n_steps = 2 ** 12
+    learning_rate = 0.0009719718719738601
+    batch_size = 2 ** 9
+    ent_coef = 1.4257709536587286e-06
+    ortho_init = True
+    net_arch = "small"
+    activation_fn = "tanh"
+    
+    if net_arch == "small":
+        net_arch = [{"pi": [128, 128, 128], "vf": [128, 128, 128]}]
+    elif net_arch == "medium":
+        net_arch = [{"pi": [128, 256, 256, 128], "vf": [128, 256, 256, 128]}]
+    elif net_arch == "large":
+        net_arch = dict(pi=[128, 256, 512, 256, 128], vf=[128, 256, 512, 256, 128])
+    else:
+        net_arch = dict(pi=[128, 256, 512, 1024, 1024, 512, 256, 128], vf=[128, 256, 512, 1024, 1024, 512, 256, 128])
+
+    activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU}[activation_fn]
+
+    kwargs = {
+       "n_steps": n_steps,
+       "gamma": gamma,
+       "gae_lambda": gae_lambda,
+       "learning_rate": learning_rate,
+       "batch_size": batch_size,
+       "ent_coef": ent_coef,
+       "max_grad_norm": max_grad_norm,
+        "policy_kwargs": {
+            "net_arch": net_arch,
+            "activation_fn": activation_fn,
+            "ortho_init": ortho_init,
+        },
+    }
+
+
+    model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir, **kwargs)
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
@@ -177,5 +225,5 @@ def run_model():
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
-    # train()
-    run_model()
+    train()
+    # run_model()
