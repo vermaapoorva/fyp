@@ -1,12 +1,14 @@
 import gymnasium as gym
 from gymnasium import spaces
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.evaluation import evaluate_policy
 import os
 import cv2
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 import custom_impl_7
 
+from torchvision import models
 import numpy as np
 from PIL import Image
 from os.path import dirname, join, abspath
@@ -26,6 +28,8 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
+
+# os.environ['http_proxy']=''
 
 SCENE_FILE = join(dirname(abspath(__file__)), 'impl_7_scene.ttt')
 
@@ -105,6 +109,39 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
+class CustomCNN(BaseFeaturesExtractor):
+    """
+    :param observation_space: (gym.Space)
+    :param features_dim: (int) Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    """
+
+    def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
+        super().__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        n_input_channels = observation_space.shape[0]
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 128, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(128, 512, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with th.no_grad():
+            n_flatten = self.cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        return self.linear(self.cnn(observations))
+
 iter = 10
 logdir = "logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
@@ -112,7 +149,7 @@ tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average f
 
 def train():
 
-    env = make_vec_env("RobotEnv7-v0", n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
+    env = make_vec_env("RobotEnv7-v0", n_envs=12, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
     # env = gym.make("RobotEnv7-v0", scene_file=SCENE_FILE)
     # env = Monitor(env, logdir)
 
@@ -124,6 +161,14 @@ def train():
 
     # policy_kwargs = dict(net_arch=dict(pi=[128, 128, 128], vf=[128, 128, 128]))
     
+    # model = models.resnet18(pretrained=True)
+
+    policy_kwargs = dict(
+        # features_extractor_class=CustomCNN,
+        # features_extractor_kwargs=dict(features_dim=128),
+        net_arch=dict(pi=[256, 512, 1024, 2048, 256], vf=[128, 128, 128])
+    )
+
     # parameters: {'gamma': 0.0008345698046059239,
     #              'max_grad_norm': 0.32642320598728214,
     #              'gae_lambda': 0.0054705510876348375,
@@ -172,7 +217,7 @@ def train():
     }
 
 
-    model = PPO('CnnPolicy', env, verbose=1, tensorboard_log=tensorboard_log_dir, **kwargs)
+    model = SAC('MultiInputPolicy', env, batch_size=2048, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)

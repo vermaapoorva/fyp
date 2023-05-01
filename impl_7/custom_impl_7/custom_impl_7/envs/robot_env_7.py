@@ -25,6 +25,11 @@ class RobotEnv7(gym.Env):
         self.action_space = spaces.Box(low=-1, high=1, shape=(3,), dtype=np.float32)
         self.observation_space = spaces.Box(low=0, high=255,
                                             shape=(3, self.image_size, self.image_size*2), dtype=np.uint8)
+        
+        self.observation_space = spaces.Dict({"camera_image": spaces.Box(low=0, high=255,
+                                            shape=(3, self.image_size, self.image_size), dtype=np.uint8),
+                                              "goal_image": spaces.Box(low=0, high=255,
+                                            shape=(3, self.image_size, self.image_size), dtype=np.uint8)})
 
         self.done = False
         self.pr = PyRep()
@@ -48,8 +53,11 @@ class RobotEnv7(gym.Env):
         return self._get_current_image()
 
     def _get_state(self):
-        state = np.concatenate((self._get_current_image(), self.goal_image), axis=1)
-        return state.transpose(2, 0, 1)
+        state = dict(camera_image=self._get_current_image().transpose(2, 0, 1),
+                     goal_image=self.goal_image.transpose(2, 0, 1))
+        return state
+        # state = np.concatenate((self._get_current_image(), self.goal_image), axis=1)
+        # return state.transpose(2, 0, 1)
 
     def _get_current_image(self):
         image = self.agent.capture_rgb()
@@ -85,9 +93,9 @@ class RobotEnv7(gym.Env):
             truncated = True
             self.step_number = 0
 
-        time.sleep(self.sleep)
-        if done:
-            time.sleep(self.sleep * 100)
+        # time.sleep(self.sleep)
+        # if done:
+        #     time.sleep(self.sleep * 100)
         
         return self._get_state(), reward, done, truncated, info
 
