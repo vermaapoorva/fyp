@@ -26,52 +26,55 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecEnv
 
 import custom_impl_7
 
-N_TRIALS = 100
+N_TRIALS = 10000
 N_STARTUP_TRIALS = 0
-N_EVALUATIONS = 5
-N_TIMESTEPS = int(1e3)
+N_EVALUATIONS = 100
+N_TIMESTEPS = int(2e5)
 EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
 N_EVAL_EPISODES = 2
 
 ENV_ID = "RobotEnv7-v0"
 
 DEFAULT_HYPERPARAMS = {
-    "policy": "CnnPolicy",
+    "policy": "MultiInputPolicy",
 }
 
 def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
     """Sampler for PPO hyperparameters."""
-    gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
-    max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
-    gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
-    n_steps = 2 ** trial.suggest_int("exponent_n_steps", 8, 14)
+    gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.01, log=True)
+    # max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
+    # gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
+    n_steps = 2 ** trial.suggest_int("exponent_n_steps", 11, 14)
     learning_rate = trial.suggest_float("lr", 5e-6, 0.003)
-    batch_size = 2 ** trial.suggest_int("exponent_batch_size", 11, 11)
-    print("batch_size", batch_size)
-    ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
-    ortho_init = trial.suggest_categorical("ortho_init", [False, True])
-    net_arch = trial.suggest_categorical("net_arch", ["large"])
-    activation_fn = trial.suggest_categorical("activation_fn", ["tanh", "relu"])
+    batch_size = 2 ** trial.suggest_int("exponent_batch_size", 10, 13)
+    # ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
+    # ortho_init = trial.suggest_categorical("ortho_init", [False, True])
+    net_arch = trial.suggest_categorical("net_arch", ["x-small", "small", "medium", "large", "x-large"])
+    # activation_fn = trial.suggest_categorical("activation_fn", ["tanh", "relu"])
     
     # Display true values.
     trial.set_user_attr("gamma_", gamma)
-    trial.set_user_attr("gae_lambda_", gae_lambda)
-    trial.set_user_attr("n_steps", n_steps)
+    # trial.set_user_attr("gae_lambda_", gae_lambda)
+    # trial.set_user_attr("n_steps", n_steps)
 
-    if net_arch == "small":
+    if net_arch == "x-small":
+        net_arch = [{"pi": [128, 128], "vf": [128, 128]}]
+    elif net_arch == "small":
         net_arch = [{"pi": [128, 128, 128], "vf": [128, 128, 128]}]
     elif net_arch == "medium":
         net_arch = [{"pi": [128, 256, 256, 128], "vf": [128, 256, 256, 128]}]
-    else:
+    elif net_arch == "large":
         net_arch = dict(pi=[128, 256, 512, 256, 128], vf=[128, 256, 512, 256, 128])
-
-    activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU}[activation_fn]
+    else:
+        net_arch = dict(pi=[128, 256, 512, 1024, 1024, 512, 256, 128], vf=[128, 256, 512, 1024, 1024, 512, 256, 128])
+        
+    # activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU}[activation_fn]
 
     params = {
-#        "n_steps": n_steps,
-#        "gamma": gamma,
+        "n_steps": n_steps,
+        "gamma": gamma,
 #        "gae_lambda": gae_lambda,
-#        "learning_rate": learning_rate,
+        "learning_rate": learning_rate,
         "batch_size": batch_size,
 #        "ent_coef": ent_coef,
 #        "max_grad_norm": max_grad_norm,
@@ -128,7 +131,7 @@ def objective(trial: optuna.Trial) -> float:
     # Create the RL model.
 
     #env = make_vec_env(ENV_ID, n_envs=1, vec_env_cls=SubprocVecEnv)
-    env = SubprocVecEnv([lambda : gym.make('RobotEnv7-v0') for _ in range(2)])
+    env = SubprocVecEnv([lambda : gym.make('RobotEnv7-v0') for _ in range(16)])
 
     model = PPO(env = env, **kwargs)
     # Create env used for evaluation.
@@ -173,7 +176,7 @@ if __name__ == "__main__":
 
     study = optuna.create_study(sampler=sampler, pruner=pruner, direction="maximize")
     try:
-        study.optimize(objective, n_trials=N_TRIALS, timeout=600)
+        study.optimize(objective, n_trials=N_TRIALS)
     except KeyboardInterrupt:
         pass
 
