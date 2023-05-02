@@ -142,14 +142,14 @@ class CustomCNN(BaseFeaturesExtractor):
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return self.linear(self.cnn(observations))
 
-iter = 10
+iter = 17
 logdir = "logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
 
 def train():
 
-    env = make_vec_env("RobotEnv7-v0", n_envs=12, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
+    env = make_vec_env("RobotEnv7-v0", n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir, env_kwargs=dict(image_size=64))
     # env = gym.make("RobotEnv7-v0", scene_file=SCENE_FILE)
     # env = Monitor(env, logdir)
 
@@ -166,7 +166,7 @@ def train():
     policy_kwargs = dict(
         # features_extractor_class=CustomCNN,
         # features_extractor_kwargs=dict(features_dim=128),
-        net_arch=dict(pi=[256, 512, 1024, 2048, 256], vf=[128, 128, 128])
+        net_arch = dict(pi=[128, 256, 512, 1024, 512, 256, 128], vf=[128, 256, 512, 1024, 512, 256, 128])
     )
 
     # parameters: {'gamma': 0.0008345698046059239,
@@ -217,7 +217,7 @@ def train():
     }
 
 
-    model = SAC('MultiInputPolicy', env, batch_size=2048, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = PPO('MultiInputPolicy', env, batch_size=4096, target_kl=0.2, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)

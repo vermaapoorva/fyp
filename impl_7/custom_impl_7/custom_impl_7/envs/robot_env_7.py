@@ -4,6 +4,7 @@ import cv2
 
 import numpy as np
 
+from PIL import Image
 from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object
 from os.path import dirname, join, abspath
@@ -38,6 +39,8 @@ class RobotEnv7(gym.Env):
         self.pr.start()  # Start the simulation
 
         self.agent = VisionSensor("camera")
+        self.agent.set_explicit_handling(value=1)
+        self.agent.handle_explicitly()
         self.target = Object("target")
         self.initial_agent_pos = self.agent.get_position()
         self.initial_target_pos = self.target.get_position()
@@ -50,11 +53,14 @@ class RobotEnv7(gym.Env):
 
     def _get_goal_image(self):
         self.agent.set_position(self.goal_pos)
-        return self._get_current_image()
+        goal_image = self._get_current_image()
+        # img = Image.fromarray(goal_image.transpose(1, 2, 0))
+        # img.save("goal_image_" + str(self.goal_pos) + ".jpg")
+        return goal_image
 
     def _get_state(self):
-        state = dict(camera_image=self._get_current_image().transpose(2, 0, 1),
-                     goal_image=self.goal_image.transpose(2, 0, 1))
+        state = dict(camera_image=self._get_current_image(),
+                     goal_image=self.goal_image)
         return state
         # state = np.concatenate((self._get_current_image(), self.goal_image), axis=1)
         # return state.transpose(2, 0, 1)
@@ -64,7 +70,7 @@ class RobotEnv7(gym.Env):
         resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
         resized = cv2.resize(resized, (self.image_size, self.image_size), interpolation = cv2.INTER_AREA)
         resized = resized.astype(np.uint8)
-        return resized
+        return resized.transpose(2, 0, 1)
 
     def step(self, action):
 
@@ -88,7 +94,7 @@ class RobotEnv7(gym.Env):
             done = True
             reward = 200
             info.update({"success": True})
-        if self.step_number == 500:
+        if self.step_number == 200:
             done = True
             truncated = True
             self.step_number = 0
@@ -97,6 +103,8 @@ class RobotEnv7(gym.Env):
         # if done:
         #     time.sleep(self.sleep * 100)
         
+        self.target.set_position(self.initial_target_pos)
+
         return self._get_state(), reward, done, truncated, info
 
     def reset(self, seed=None, options=None):
