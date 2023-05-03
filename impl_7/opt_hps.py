@@ -10,7 +10,7 @@ You can run this example as follows:
 """
 from typing import Any
 from typing import Dict
-
+import os
 import gymnasium as gym
 import optuna
 from optuna.pruners import MedianPruner
@@ -133,7 +133,12 @@ def objective(trial: optuna.Trial) -> float:
     #env = make_vec_env(ENV_ID, n_envs=1, vec_env_cls=SubprocVecEnv)
     env = SubprocVecEnv([lambda : gym.make('RobotEnv7-v0') for _ in range(16)])
 
-    model = PPO(env = env, **kwargs)
+    tensorboard_log_dir = "tensorboard_logs_hp_tuning"
+
+    if not os.path.exists(tensorboard_log_dir):
+        os.makedirs(tensorboard_log_dir)
+    
+    model = PPO(env = env, **kwargs, tensorboard_log=tensorboard_log_dir)
     # Create env used for evaluation.
     # eval_env = Monitor(gym.make(ENV_ID))
     log_dir = "logs_hp"

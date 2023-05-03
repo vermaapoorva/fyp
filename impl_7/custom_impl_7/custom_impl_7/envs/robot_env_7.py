@@ -27,10 +27,10 @@ class RobotEnv7(gym.Env):
         self.observation_space = spaces.Box(low=0, high=255,
                                             shape=(3, self.image_size, self.image_size*2), dtype=np.uint8)
         
-        self.observation_space = spaces.Dict({"camera_image": spaces.Box(low=0, high=255,
-                                            shape=(3, self.image_size, self.image_size), dtype=np.uint8),
-                                              "goal_image": spaces.Box(low=0, high=255,
-                                            shape=(3, self.image_size, self.image_size), dtype=np.uint8)})
+        # self.observation_space = spaces.Dict({"camera_image": spaces.Box(low=0, high=255,
+        #                                     shape=(3, self.image_size, self.image_size), dtype=np.uint8),
+        #                                       "goal_image": spaces.Box(low=0, high=255,
+        #                                     shape=(3, self.image_size, self.image_size), dtype=np.uint8)})
 
         self.done = False
         self.pr = PyRep()
@@ -39,10 +39,9 @@ class RobotEnv7(gym.Env):
         self.pr.start()  # Start the simulation
 
         self.agent = VisionSensor("camera")
-        self.agent.set_explicit_handling(value=1)
-        self.agent.handle_explicitly()
+        # self.agent.set_explicit_handling(value=1)
+        # self.agent.handle_explicitly()
         self.target = Object("target")
-        self.initial_agent_pos = self.agent.get_position()
         self.initial_target_pos = self.target.get_position()
         self.goal_pos = self.get_random_goal_pos()
         self.step_number = 0
@@ -54,23 +53,31 @@ class RobotEnv7(gym.Env):
     def _get_goal_image(self):
         self.agent.set_position(self.goal_pos)
         goal_image = self._get_current_image()
-        # img = Image.fromarray(goal_image.transpose(1, 2, 0))
-        # img.save("goal_image_" + str(self.goal_pos) + ".jpg")
+        img = Image.fromarray(goal_image)
+        img.save("goal_" + str(self.goal_pos) + ".jpg")
         return goal_image
 
     def _get_state(self):
-        state = dict(camera_image=self._get_current_image(),
-                     goal_image=self.goal_image)
-        return state
-        # state = np.concatenate((self._get_current_image(), self.goal_image), axis=1)
-        # return state.transpose(2, 0, 1)
+        # state = dict(camera_image=self._get_current_image(),
+        #              goal_image=self.goal_image)
+        # return state
+        current = self._get_current_image()
+        # if self.step_number % 100 == 0:
+        #     img = Image.fromarray(current)
+        #     img.save("current" + str(self.agent.get_position()) + ".jpg")
+        state = np.concatenate((current, self.goal_image), axis=1)
+        # if self.step_number % 100 == 0:
+        #     img = Image.fromarray(state)
+        #     img.save("concat" + str(self.agent.get_position()) + ".jpg")
+        return state.transpose(2, 0, 1)
 
     def _get_current_image(self):
+        self.pr.step()
         image = self.agent.capture_rgb()
         resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
         resized = cv2.resize(resized, (self.image_size, self.image_size), interpolation = cv2.INTER_AREA)
         resized = resized.astype(np.uint8)
-        return resized.transpose(2, 0, 1)
+        return resized
 
     def step(self, action):
 
@@ -85,27 +92,30 @@ class RobotEnv7(gym.Env):
             self.agent.set_position([new_x, new_y, new_z])
 
         tx, ty, tz = self.goal_pos
-        reward = -np.sqrt((new_x - tx) ** 2 + (new_y - ty) ** 2 + (new_z - tz) ** 2)
+        distance = np.sqrt((new_x - tx) ** 2 + (new_y - ty) ** 2 + (new_z - tz) ** 2)
+        reward = -distance
+
+        # print(distance)
+        # reward = -1
 
         done = False
-        info = {}
         truncated = False
-        if reward > -0.01:
+        if distance < 0.01:
+        # if reward > 100:
             done = True
             reward = 200
-            info.update({"success": True})
-        if self.step_number == 200:
+        if self.step_number == 500:
             done = True
             truncated = True
             self.step_number = 0
 
-        # time.sleep(self.sleep)
-        # if done:
-        #     time.sleep(self.sleep * 100)
+        time.sleep(self.sleep)
+        if done:
+            time.sleep(self.sleep * 100)
         
         self.target.set_position(self.initial_target_pos)
 
-        return self._get_state(), reward, done, truncated, info
+        return self._get_state(), reward, done, truncated, {}
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -129,12 +139,14 @@ class RobotEnv7(gym.Env):
         x = np.random.uniform(-0.2, 0.2)
         y = np.random.uniform(-0.25, 0.25)
         z = np.random.uniform(1, 2)
+        # print("agent pos:", [x, y, z])
         return [x, y, z]
     
     def get_random_goal_pos(self):
-        x = np.random.uniform(-0.2, 0.2)
-        y = np.random.uniform(-0.2, 0.2)
-        z = np.random.uniform(1, 1.5)
+        x = np.random.uniform(-0.1, 0.1)
+        y = np.random.uniform(-0.1, 0.1)
+        z = np.random.uniform(1, 1.2)
+        # print("goal pos:", [x, y, z])
         return [x, y, z]
     
     def get_distance_to_goal(self):
