@@ -39,6 +39,7 @@ class RobotEnv7(gym.Env):
         self.pr.start()  # Start the simulation
 
         self.agent = VisionSensor("camera")
+        self.goal_camera = VisionSensor("goal_camera")
         # self.agent.set_explicit_handling(value=1)
         # self.agent.handle_explicitly()
         self.target = Object("target")
@@ -52,9 +53,10 @@ class RobotEnv7(gym.Env):
 
     def _get_goal_image(self):
         self.agent.set_position(self.goal_pos)
+        self.goal_camera.set_position(self.goal_pos)
         goal_image = self._get_current_image()
-        img = Image.fromarray(goal_image)
-        img.save("goal_" + str(self.goal_pos) + ".jpg")
+        # img = Image.fromarray(goal_image)
+        # img.save("goal_" + str(self.goal_pos) + ".jpg")
         return goal_image
 
     def _get_state(self):

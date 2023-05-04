@@ -4,24 +4,16 @@ import os
 from tensorflow import keras
 import cv2
 
-print("import 1")
-
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-print("import 2")
-
 from PIL import Image
 from os.path import dirname, join, abspath
-
-print("import 3")
 
 import matplotlib.pyplot as plt
 
 from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object, Camera
-
-print("import 4")
 
 import time
 
@@ -232,7 +224,7 @@ def train_model():
 
     
     # Train the neural network on the dataset
-    history = model.fit(x_train, y_train, epochs=100, batch_size=512, validation_data=(x_val, y_val), callbacks=[cp_callback])
+    history = model.fit(x_train, y_train, epochs=100, batch_size=512, validation_data=(x_val, y_val))
 
     # Plot the training and validation loss
     plt.plot(history.history['loss'][2:])
@@ -302,5 +294,5 @@ def evaluate_model():
     print("Average distance to target: ", accuracy)
 
 # collect_data()
-# train_model()
-evaluate_model()
+train_model()
+# evaluate_model()
