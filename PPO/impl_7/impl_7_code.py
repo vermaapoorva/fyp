@@ -139,14 +139,14 @@ class CustomCNN(BaseFeaturesExtractor):
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return self.linear(self.cnn(observations))
 
-iter = 11
+iter = 12
 logdir = "logs/logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
 
 def train():
 
-    env = make_vec_env("RobotEnv7-v0", n_envs=5, vec_env_cls=SubprocVecEnv, monitor_dir=logdir, env_kwargs=dict(image_size=64))
+    env = make_vec_env("RobotEnv7-v0", n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir, env_kwargs=dict(image_size=64))
     # env = gym.make("RobotEnv7-v0", scene_file=SCENE_FILE)
     # env = Monitor(env, logdir)
 
@@ -157,10 +157,10 @@ def train():
         os.makedirs(tensorboard_log_dir)
 
     policy_kwargs = dict(
-        net_arch = dict(pi=[128, 256, 256, 128], vf=[128, 256, 256, 128])
+        net_arch=dict(pi=[128, 256, 512, 1024, 1024, 128], vf=[128, 256, 512, 1024, 1024, 128])
     )
 
-    model = PPO('CnnPolicy', env, policy_kwargs=policy_kwargs, batch_size=2048, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = PPO('CnnPolicy', env, policy_kwargs=policy_kwargs, batch_size=4096, verbose=1, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
@@ -216,5 +216,5 @@ def run_model():
     print(f"Reliability = Percentage of successful episodes: {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
-    # train()
-    run_model()
+    train()
+    # run_model()

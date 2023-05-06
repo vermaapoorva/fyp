@@ -26,7 +26,7 @@ class RobotEnv8(gym.Env):
         self.action_space = spaces.Box(low=np.array([-1, -1, -1, -np.pi, -np.pi, -np.pi]),
                                        high=np.array([1, 1, 1, np.pi, np.pi, np.pi]),
                                        shape=(6,),
-                                       dtype=np.float32)
+                                       dtype=np.float64)
         self.observation_space = spaces.Box(low=0, high=255,
                                             shape=(3, self.image_size, self.image_size), dtype=np.uint8)
         
@@ -94,8 +94,14 @@ class RobotEnv8(gym.Env):
         done = False
         truncated = False
 
+        if distance < 0.01:
+            print("Reached goal distance!")
+            reward = 50
+        if self.get_orientation_diff_x() < 0.1 and self.get_orientation_diff_y() < 0.1 and self.get_orientation_diff_z() < 0.1:
+            print("Reached goal orientation!")
+            reward = 50
         if distance < 0.01 and self.get_orientation_diff_x() < 0.1 and self.get_orientation_diff_y() < 0.1 and self.get_orientation_diff_z() < 0.1:
-            print("Reached goal!")
+            print("Reached goal!!")
             done = True
             reward = 200
         if self.step_number == 500:
@@ -151,27 +157,13 @@ class RobotEnv8(gym.Env):
         # print("agent orientation:", [x, y, z])
         return [x, y, z]
     
-    def get_random_goal_pos(self):
-        x = np.random.uniform(-0.1, 0.1)
-        y = np.random.uniform(-0.1, 0.1)
-        z = np.random.uniform(1, 1.2)
-        # print("goal pos:", [x, y, z])
-        return [x, y, z]
-
-    def get_random_goal_orientation(self):
-        x = np.random.uniform(-np.pi, np.pi)
-        y = np.random.uniform(-np.pi, np.pi)
-        z = np.random.uniform(-np.pi, np.pi)
-        # print("goal orientation:", [x, y, z])
-        return [x, y, z]
-    
     def get_distance_to_goal(self):
         x, y, z = self.agent.get_position()
         tx, ty, tz = self.goal_pos
         return np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
 
     def get_orientation_difference_to_goal(self):
-        return (self.get_orientation_diff_x() + self.get_orientation_diff_y() + self.get_orientation_diff_z())/(2*np.pi)
+        return (self.get_orientation_diff_x() + self.get_orientation_diff_y() + self.get_orientation_diff_z())/(6*np.pi)
 
     def get_orientation_diff_x(self):
         x, _, _ = self.agent.get_orientation()

@@ -108,7 +108,7 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 1
+iter = 2
 logdir = "logs/logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
@@ -116,8 +116,6 @@ tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average f
 def train():
 
     env = make_vec_env("RobotEnv8-v0", n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
-    # env = gym.make("RobotEnv8-v0", scene_file=SCENE_FILE)
-    # env = Monitor(env, logdir)
 
     if not os.path.exists(logdir):
         os.makedirs(logdir)
@@ -126,7 +124,7 @@ def train():
         os.makedirs(tensorboard_log_dir)
 
     policy_kwargs = dict(
-        net_arch=dict(pi=[128, 256, 128], vf=[128, 256, 128])
+        net_arch=dict(pi=[128, 256, 512, 1024, 1024, 128], vf=[128, 256, 512, 1024, 1024, 128])
     )
 
     model = PPO('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
