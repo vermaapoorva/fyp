@@ -216,5 +216,5 @@ def run_model():
     print(f"Reliability = Percentage of successful episodes: {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
-    train()
-    # run_model()
+    # train()
+    run_model()

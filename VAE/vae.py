@@ -42,7 +42,7 @@ print(x_test.shape)
 from keras.callbacks import TensorBoard
 
 autoencoder.fit(x_train, x_train,
-                epochs=20,
+                epochs=50,
                 batch_size=128,
                 shuffle=True,
                 validation_data=(x_test, x_test),
@@ -94,5 +94,5 @@ for i in range(1, n + 1):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-plt.savefig('output_20-epochs.png')
+plt.savefig('output_50-epochs.png')
 plt.show()
