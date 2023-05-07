@@ -90,7 +90,6 @@ class RobotEnv8(gym.Env):
         # print("distance: ", distance, "orientation difference: ", orientation_difference, "reward: ", reward)
 
         done = False
-        done = False
         truncated = False
 
         if self.get_distance_to_goal() < 0.01:
