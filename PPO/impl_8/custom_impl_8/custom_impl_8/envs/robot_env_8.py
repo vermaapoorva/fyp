@@ -83,9 +83,9 @@ class RobotEnv8(gym.Env):
         self.agent.set_orientation([curr_or_x, curr_or_y, new_or_z])
 
         dist_factor = 1
-        or_factor = 1/np.pi
+        or_factor = 0.05
         distance = self.get_distance_to_goal() * dist_factor
-        orientation_difference = self.get_orientation_diff_z() * or_factor
+        orientation_difference = (self.get_orientation_diff_z()/np.pi) * or_factor
         reward = - (distance + orientation_difference)
         # print("distance: ", distance, "orientation difference: ", orientation_difference, "reward: ", reward)
 
@@ -94,14 +94,14 @@ class RobotEnv8(gym.Env):
 
         if self.get_distance_to_goal() < 0.01:
             print("Reached goal distance!")
-            reward = 5
-        if self.get_orientation_diff_z() < 0.02:
+            reward = 10
+        if self.get_orientation_diff_z() < 0.05:
             print("Reached goal orientation!")
-            reward = 5
-        if self.get_distance_to_goal() < 0.01 and self.get_orientation_diff_z() < 0.02:
+        #     reward = 1
+        if self.get_distance_to_goal() < 0.01 and self.get_orientation_diff_z() < 0.05:
             print("Reached goal!!")
             done = True
-            reward = 200
+            reward = 250
         if self.step_number == 500:
             # print("Failed to reach goal")
             done = True
