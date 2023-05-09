@@ -108,7 +108,7 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 10
+iter = 12
 logdir = "logs/logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
@@ -124,7 +124,7 @@ def train():
         os.makedirs(tensorboard_log_dir)
 
     policy_kwargs = dict(
-        net_arch=dict(pi=[128, 256, 512, 1024, 128], vf=[128, 256, 512, 1024, 128])
+        net_arch=dict(pi=[128, 256, 512, 1024, 1024, 128], vf=[128, 256, 512, 1024, 1024, 128])
     )
 
     model = PPO('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)

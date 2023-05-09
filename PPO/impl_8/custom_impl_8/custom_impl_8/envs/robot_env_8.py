@@ -23,8 +23,8 @@ class RobotEnv8(gym.Env):
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
-        self.action_space = spaces.Box(low=np.array([-1, -1, -1, -2*np.pi]),
-                                       high=np.array([1, 1, 1, 2*np.pi]),
+        self.action_space = spaces.Box(low=np.array([-1, -1, -1, -np.pi/4]),
+                                       high=np.array([1, 1, 1, np.pi/4]),
                                        shape=(4,),
                                        dtype=np.float64)
         self.observation_space = spaces.Box(low=0, high=255,
@@ -82,8 +82,11 @@ class RobotEnv8(gym.Env):
 
         self.agent.set_orientation([curr_or_x, curr_or_y, new_or_z])
 
+        # gpu06
+        # dist_factor = 0.995
+        # or_factor = 0.005
         dist_factor = 1
-        or_factor = 0.05
+        or_factor = 0.01
         distance = self.get_distance_to_goal() * dist_factor
         orientation_difference = (self.get_orientation_diff_z()/np.pi) * or_factor
         reward = - (distance + orientation_difference)
@@ -94,14 +97,14 @@ class RobotEnv8(gym.Env):
 
         if self.get_distance_to_goal() < 0.01:
             print("Reached goal distance!")
-            reward = 10
-        if self.get_orientation_diff_z() < 0.05:
+            # reward = 10
+        if self.get_orientation_diff_z() < 0.1:
             print("Reached goal orientation!")
-        #     reward = 1
-        if self.get_distance_to_goal() < 0.01 and self.get_orientation_diff_z() < 0.05:
+            # reward = 1
+        if self.get_distance_to_goal() < 0.01 and self.get_orientation_diff_z() < 0.1:
             print("Reached goal!!")
             done = True
-            reward = 250
+            reward = 200
         if self.step_number == 500:
             # print("Failed to reach goal")
             done = True
