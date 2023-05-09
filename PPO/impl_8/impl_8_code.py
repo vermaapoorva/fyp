@@ -28,8 +28,6 @@ from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_r
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
-# os.environ['http_proxy']=''
-
 SCENE_FILE = join(dirname(abspath(__file__)), 'impl_8_scene.ttt')
 
 #################################################################################################
@@ -108,7 +106,7 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 12
+iter = 13
 logdir = "logs/logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
@@ -124,10 +122,13 @@ def train():
         os.makedirs(tensorboard_log_dir)
 
     policy_kwargs = dict(
-        net_arch=dict(pi=[128, 256, 512, 1024, 1024, 128], vf=[128, 256, 512, 1024, 1024, 128])
+        net_arch=dict(pi=[128, 256, 512, 128], vf=[128, 256, 512, 128])
     )
 
-    model = PPO('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = PPO.load("logs/logs13/best_model.zip", env=env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    # model = PPO('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+
+    # model.set_env(env)
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
@@ -149,6 +150,7 @@ def run_model():
     total_episodes = 0
     successful_episodes = 0
     distances_to_goal = []
+    orientation_difference_z = []
     while total_episodes < 100:
         obs, _ = env.reset()
         done = False
@@ -167,16 +169,19 @@ def run_model():
             env.render()
 
         distance_to_goal = env.get_distance_to_goal()
+        orientation_difference_z
 
-        if info.get("success"):
+        if not truncated:
             successful_episodes += 1
-            print(f"Episode {total_episodes} successful! Distance to goal: {distance_to_goal}")
+            print(f"Episode {total_episodes} successful! Distance to goal: {distance_to_goal}. Orientation difference z: {orientation_difference_z}")
         
         distances_to_goal.append(distance_to_goal)
+        orientation_difference_z.append(orientation_difference_z)
 
     print(f"Number of successful episodes: {successful_episodes}")
     print(f"Number of total episodes: {total_episodes}")
-    print(f"Accuracy = Average distance to goal for valid episodes: {np.mean(distances_to_goal)}")
+    print(f"Distance Accuracy = Average distance to goal: {np.mean(distances_to_goal)}")
+    print(f"Orientation Accuracy = Average orientation difference z: {np.mean(orientation_difference_z)}")
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
