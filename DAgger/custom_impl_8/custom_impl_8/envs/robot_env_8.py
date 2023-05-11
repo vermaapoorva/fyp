@@ -91,12 +91,10 @@ class RobotEnv8(gym.Env):
         done = False
         truncated = False
 
-        if self.get_distance_to_goal() < 0.01:
-            print("Reached goal distance!")
-            # reward = 10
-        if self.get_orientation_diff_z() < 0.1:
-            print("Reached goal orientation!")
-            # reward = 1
+        # if self.get_distance_to_goal() < 0.01:
+        #     print("Reached goal distance!")
+        # if self.get_orientation_diff_z() < 0.1:
+        #     print("Reached goal orientation!")
         if self.get_distance_to_goal() < 0.01 and self.get_orientation_diff_z() < 0.1:
             print("Reached goal!!")
             done = True
@@ -145,7 +143,7 @@ class RobotEnv8(gym.Env):
     def get_random_agent_orientation(self):
         x = self.goal_orientation[0]
         y = self.goal_orientation[1]
-        z = np.random.uniform(-2*np.pi, 2*np.pi)
+        z = np.random.uniform(-np.pi, np.pi)
         # print("agent orientation:", [x, y, z])
         return [x, y, z]
     

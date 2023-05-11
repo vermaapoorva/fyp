@@ -43,12 +43,12 @@ class RobotEnv8(gym.Env):
         self.target = Object("target")
         self.initial_target_pos = self.target.get_position()
 
-        self.goal_pos = [0.1, -0.12, 0.95]
+        self.goal_pos = [0.1, -0.095, 0.95]
         self.goal_orientation = [-np.pi, 0, np.pi/9]
         self.goal_camera.set_position(self.goal_pos)
         self.goal_camera.set_orientation(self.goal_orientation)
         img = Image.fromarray(self._get_current_image(self.goal_camera))
-        img.save("goal_" + str(self.step_number) + ".jpg")
+        img.save("goal2_" + str(self.step_number) + ".jpg")
 
         self.agent.set_position(self.get_random_agent_pos())
         self.agent.set_orientation(self.get_random_agent_orientation())
@@ -90,6 +90,9 @@ class RobotEnv8(gym.Env):
 
         done = False
         truncated = False
+
+        # print("distance: ", self.get_distance_to_goal())
+        # print("orientation_difference: ", self.get_orientation_diff_z())
 
         if self.get_distance_to_goal() < 0.01:
             print("Reached goal distance!")
@@ -136,8 +139,8 @@ class RobotEnv8(gym.Env):
         self.pr.shutdown()  # Close the application
 
     def get_random_agent_pos(self):
-        x = np.random.uniform(-0.2, 0.2)
-        y = np.random.uniform(-0.2, 0.2)
+        x = np.random.uniform(-0.1, 0.1)
+        y = np.random.uniform(-0.1, 0.1)
         z = np.random.uniform(1, 2)
         # print("agent pos:", [x, y, z])
         return [x, y, z]
@@ -145,7 +148,7 @@ class RobotEnv8(gym.Env):
     def get_random_agent_orientation(self):
         x = self.goal_orientation[0]
         y = self.goal_orientation[1]
-        z = np.random.uniform(-2*np.pi, 2*np.pi)
+        z = np.random.uniform(-np.pi, np.pi)
         # print("agent orientation:", [x, y, z])
         return [x, y, z]
     

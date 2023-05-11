@@ -5,7 +5,6 @@ from tensorflow import keras
 import cv2
 
 from sklearn.model_selection import train_test_split
-import numpy as np
 
 from PIL import Image
 from os.path import dirname, join, abspath
@@ -17,14 +16,10 @@ from pyrep.objects import VisionSensor, Object, Camera
 
 import time
 
-SCENE_FILE = join(dirname(abspath(__file__)), 'baseline_scene.ttt')
+import gymnasium as gym
+from gymnasium import spaces
 
-# print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
-# tf.debugging.set_log_device_placement(True)
-
-#################################################################################################
-################################   SETTING UP THE ENVIRONMENT   #################################
-#################################################################################################
+SCENE_FILE = join(dirname(abspath(__file__)), 'impl_8_scene.ttt')
 
 class RobotEnvBaseline():
 
@@ -32,104 +27,146 @@ class RobotEnvBaseline():
         print("init")
         self.image_size = image_size
         self.sleep = sleep
+        # Define action and observation space
+        # They must be gym.spaces objects
+        # Example when using discrete actions:
+        self.action_space = spaces.Box(low=np.array([-1, -1, -1, -np.pi/4]),
+                                       high=np.array([1, 1, 1, np.pi/4]),
+                                       shape=(4,),
+                                       dtype=np.float64)
+        self.observation_space = spaces.Box(low=0, high=255,
+                                            shape=(3, self.image_size, self.image_size), dtype=np.uint8)
         
         self.pr = PyRep()
         # Launch the application with a scene file in headless mode
         self.pr.launch(SCENE_FILE, headless=headless) 
         self.pr.start()  # Start the simulation
-
-        self.done = False
-        self.completed = False
-        self.agent = VisionSensor("camera")
-        self.target = Object("target")
-        self.initial_agent_pos = self.agent.get_position()
-        self.initial_target_pos = self.target.get_position()
-        self.goal_pos = [0, 0, 1]
-        self.step_number = 0
         
+        self.step_number = 0
+        self.done = False
+
+        self.agent = VisionSensor("camera")
+        self.goal_camera = VisionSensor("goal_camera")
+        self.target = Object("target")
+        self.initial_target_pos = self.target.get_position()
+
+        self.goal_pos = [0.1, -0.12, 0.95]
+        self.goal_orientation = [-np.pi, 0, np.pi/9]
+        self.goal_camera.set_position(self.goal_pos)
+        self.goal_camera.set_orientation(self.goal_orientation)
+        img = Image.fromarray(self._get_current_image(self.goal_camera))
+        img.save("goal_" + str(self.step_number) + ".jpg")
+
         self.agent.set_position(self.get_random_agent_pos())
+        self.agent.set_orientation(self.get_random_agent_orientation())
 
     def _get_state(self):
-        # Return state containing image
-        image = self.agent.capture_rgb()
+        current = self._get_current_image(self.agent)
+        return current.transpose(2, 0, 1)
+
+    def _get_current_image(self, camera):
+        self.pr.step()
+        image = camera.capture_rgb()
         resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
         resized = cv2.resize(resized, (self.image_size, self.image_size), interpolation = cv2.INTER_AREA)
         resized = resized.astype(np.uint8)
         return resized
 
-    # If action is given then testing, else collect data
-    def step(self, action=None):
+    def step(self):
 
         self.pr.step()
         self.step_number += 1
-        action_scale = 0.01
-        testing = True
-        if action is None:
-            # If no action is given, use the model to predict the next action
-            action = self.get_next_action()
-            testing = False
+        action_scale = 0.01            
+            
+        curr_or_x, curr_or_y, curr_or_z = self.agent.get_orientation()
 
-        new_x, new_y, new_z = self.agent.get_position() + action_scale*action
-        # If out of bounds, done = True
-        if new_x < -0.25 or new_x > 0.25 or new_y < -0.25 or new_y > 0.25 or new_z < 0.8 or new_z > 2:
-            print("Out of bounds")
-            self.done = True
+        new_x, new_y, new_z = self.agent.get_position() + action[:3] * action_scale
+        new_or_z = (curr_or_z + action[3]) % (2 * np.pi)
 
-        # If reached height of target, done = True        
-        if self.distance_to_goal() < 0.01:
-            print("Reached target")
-            self.done = True
-            self.completed = True
+        # If within range, move
+        if new_x > -0.2 and new_x < 0.2 and new_y > -0.2 and new_y < 0.2 and new_z > 0.8 and new_z < 2:
+            self.agent.set_position([new_x, new_y, new_z])
 
-        # If testing and max steps reached, done = True
-        if testing and self.step_number == 500:
-            print("Max steps reached")
-            self.done = True
+        self.agent.set_orientation([curr_or_x, curr_or_y, new_or_z])
+
+        dist_factor = 1
+        or_factor = 0.01
+        distance = self.get_distance_to_goal() * dist_factor
+        orientation_difference = (self.get_orientation_diff_z()/np.pi) * or_factor
+        reward = - (distance + orientation_difference)
+
+        done = False
+        truncated = False
+
+        if self.get_distance_to_goal() < 0.01:
+            print("Reached goal distance!")
+        if self.get_orientation_diff_z() < 0.1:
+            print("Reached goal orientation!")
+        if self.get_distance_to_goal() < 0.01 and self.get_orientation_diff_z() < 0.1:
+            print("Reached goal!!")
+            done = True
+            reward = 200
+        if self.step_number == 500:
+            # print("Failed to reach goal")
+            done = True
+            truncated = True
             self.step_number = 0
-            self.completed = True
-
-        self.agent.set_position([new_x, new_y, new_z])
-        # print("distance to goal: ", self.distance_to_goal())
 
         time.sleep(self.sleep)
-        if self.done:
+        if done:
             time.sleep(self.sleep * 100)
         
-        return self._get_state(), self.done, action, self.completed
-    
-    def get_next_action(self):
-        T = self.predict_T()
-        T = T / np.linalg.norm(T)
-        return T
-
-    def predict_T(self):
-        curr_x, curr_y, curr_z = self.agent.get_position()
-        T = np.array([self.goal_pos[0] - curr_x, self.goal_pos[1] - curr_y, self.goal_pos[2] - curr_z])
-        return T
-
-    def distance_to_goal(self):
-        dist = np.linalg.norm(np.array(self.agent.get_position()) - np.array(self.goal_pos))
-        return dist
-
-    def reset(self):
-        random_agent_pos = self.get_random_agent_pos()
-        self.agent.set_position(random_agent_pos)
         self.target.set_position(self.initial_target_pos)
-        self.done = False
-        self.completed = False
-        self.step_number = 0
-        return self._get_state()
 
-    def close(self):
+        return self._get_state(), reward, done, truncated, {}
+        
+
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        
+        self.step_number = 0
+        self.done = False
+
+        self.agent.set_position(self.get_random_agent_pos())
+        self.agent.set_orientation(self.get_random_agent_orientation())
+        
+        self.target.set_position(self.initial_target_pos)
+
+        return self._get_state(), {}  # reward, done, info can't be included
+
+    def render(self, mode='human'):
+        return
+
+    def close (self):
         self.pr.stop()  # Stop the simulation
         self.pr.shutdown()  # Close the application
 
     def get_random_agent_pos(self):
         x = np.random.uniform(-0.2, 0.2)
-        y = np.random.uniform(-0.25, 0.25)
+        y = np.random.uniform(-0.2, 0.2)
         z = np.random.uniform(1, 2)
+        # print("agent pos:", [x, y, z])
+        return [x, y, z]
+
+    def get_random_agent_orientation(self):
+        x = self.goal_orientation[0]
+        y = self.goal_orientation[1]
+        z = np.random.uniform(-np.pi, np.pi)
+        # print("agent orientation:", [x, y, z])
         return [x, y, z]
     
+    def get_distance_to_goal(self):
+        x, y, z = self.agent.get_position()
+        tx, ty, tz = self.goal_pos
+        return np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
+
+    # Returns smallest absolute difference between current and goal orientation
+    def get_orientation_diff_z(self):
+        _, _, z = self.agent.get_orientation()
+        _, _, tz = self.goal_orientation
+        diff = abs(z - tz)
+        return min(diff, 2 * np.pi - diff)
+
 #################################################################################################
 ####################################   TRAINING THE MODEL   #####################################
 #################################################################################################
@@ -137,25 +174,27 @@ class RobotEnvBaseline():
 checkpoint_path = "model_1_checkpoint.ckpt"
 
 def collect_data():
-    env = RobotEnvBaseline(headless=True, image_size=64)
+    env = RobotEnvBaseline(headless=True)
 
     # Collect training data
     x_train = []
     y_train = []
-    completed = []
+    completed = 0
     while len(x_train) < 100000:
         print("Current len of x_train: ", len(x_train))
         state = env.reset()
-        state, done, action, complete = env.step()
+        state, reward, done, truncated, _ = env.step()
         while not done:
             x_train.append(state)
-            state, done, action, complete = env.step()
+            state, reward, done, truncated, _ = env.step()
             y_train.append(action)
-            completed.append(complete)
+
+        if not truncated:
+            completed += 1
 
     print("Training data collected")
     print("Number of training examples: ", len(x_train))
-    print("Number of completed episodes: ", sum(completed))    
+    print("Number of completed episodes: ", sum(completed))
 
     # Make training data numpy arrays
     x_train = np.array(x_train)
@@ -169,10 +208,10 @@ def collect_data():
     np.save("y_train.npy", y_train)
 
     # Save x_train as images
-    # for i in range(len(x_train)):
-    #   if i % 100 == 0:
-    #     img = Image.fromarray(x_train[i], 'RGB')
-    #     img.save("x_train_" + str(i) + ".jpg")
+    for i in range(len(x_train)):
+      if i % 100 == 0:
+        img = Image.fromarray(x_train[i], 'RGB')
+        img.save("training_imgs/x_train_" + str(i) + ".jpg")
 
 def create_model():
     # Define the input shape of the images
