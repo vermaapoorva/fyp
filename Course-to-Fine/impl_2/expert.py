@@ -38,5 +38,14 @@ def collect_data():
     logdir = "logs/"
     env = Monitor(gym.make("RobotEnv-v0"), "logs/")
 
+    for i in range(10000000000000):
+        env.reset()
+        done = False
+        while not done:
+            action = expert_policy(env)
+            obs, reward, done, truncated, info = env.step(action)
+            if done:
+                break
+
 if __name__ == "__main__":
     collect_data()

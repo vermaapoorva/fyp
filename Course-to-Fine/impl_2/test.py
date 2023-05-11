@@ -19,17 +19,35 @@ def rad_to_pifrac(rad, max_denominator=8000):
 # print("new angle: ", rad_to_pifrac(new_angle))
 
 
-angle = -2 * np.pi
-goal_angle = np.pi/9
+# angle = -2 * np.pi
+# goal_angle = np.pi/9
 
-diff = abs(angle - goal_angle)
-print("absolute diff", rad_to_pifrac(diff))
-min_diff = min(diff, 2*np.pi - diff)
-calc_diff = (diff+np.pi) % (2*np.pi) - np.pi
+# diff = abs(angle - goal_angle)
+# print("absolute diff", rad_to_pifrac(diff))
+# min_diff = min(diff, 2*np.pi - diff)
+# calc_diff = (diff+np.pi) % (2*np.pi) - np.pi
 
-print("min diff", rad_to_pifrac(min_diff))
-print("calc diff", rad_to_pifrac(calc_diff))
+# print("min diff", rad_to_pifrac(min_diff))
+# print("calc diff", rad_to_pifrac(calc_diff))
 
-print("diff: ", diff)
-print("min diff: ", min_diff)
-print("calc diff: ", calc_diff)
+# print("diff: ", diff)
+# print("min diff: ", min_diff)
+# print("calc diff: ", calc_diff)
+
+initial_radius = 0.2
+current_height = 1
+max_height = 1
+min_height = 0.5
+max_radius = 0.2
+min_radius = 0.05
+
+while current_height >= min_height:
+
+    # allowed_radius = initial_radius * ((current_height - min_height) / (max_height - min_height))
+    # allowed_radius = max_radius - ((current_height - min_height) / (max_height - min_height)) * (max_radius - min_radius)
+    allowed_radius = min_radius + ((current_height - min_height) / (max_height - min_height)) * (max_radius - min_radius)
+
+    # allowed_radius = initial_radius * (1 - (current_height - min_height) / (max_height - min_height))
+    # print("current_height: ", current_height)
+    print("allowed_radius: ", allowed_radius)
+    current_height -= 0.1

@@ -12,28 +12,14 @@ from os.path import dirname, join, abspath
 
 import time
 SCENE_FILE = join(dirname(abspath(__file__)), 'robot_env.ttt')
-
-# Bottleneck position+orientation
-BOTTLENECK_X = 0.07
-BOTTLENECK_Y = -0.085
-BOTTLENECK_Z = 0.7
-BOTTLENECK_ORIENTATION_Z = -np.pi/9
-
-# Range of the agent's position
 MAX_HEIGHT = 1
 MAX_RADIUS = 0.2
 MIN_RADIUS = 0.1
 
-# Max action length for 1 step
-MAX_ACTION = 0.01
-
-# Max episode length (in steps)
-MAX_EPISODE_LENGTH = 500
-
 class RobotEnv(gym.Env):
     """Custom Environment that follows gym interface"""
 
-    def __init__(self, headless=True, image_size=64, sleep=0):
+    def __init__(self, headless=False, image_size=64, sleep=0):
         super(RobotEnv, self).__init__()
         print("init")
         self.image_size = image_size
@@ -48,8 +34,8 @@ class RobotEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=255,
                                             shape=(3, self.image_size, self.image_size), dtype=np.uint8)
         
-        # Launch the application with a scene file in headless mode
         self.pr = PyRep()
+        # Launch the application with a scene file in headless mode
         self.pr.launch(SCENE_FILE, headless=headless) 
         self.pr.start()  # Start the simulation
         
@@ -61,11 +47,13 @@ class RobotEnv(gym.Env):
         self.goal_camera = VisionSensor("goal_camera")
         self.target = Object("target")
         self.initial_target_pos = self.target.get_position()
+
+        print(self.initial_target_pos)
+
         self.table.set_position([0, 0, 0.5])
 
-        # Set goal position+orientation and capture goal image
-        self.goal_pos = [BOTTLENECK_X, BOTTLENECK_Y, BOTTLENECK_Z]
-        self.goal_orientation = [-np.pi, 0, BOTTLENECK_ORIENTATION_Z]
+        self.goal_pos = [0.07, -0.085, 0.7]
+        self.goal_orientation = [-np.pi, 0, -np.pi/9]
         self.goal_camera.set_position(self.goal_pos)
         self.goal_camera.set_orientation(self.goal_orientation)
         img = Image.fromarray(self._get_current_image(self.goal_camera))
@@ -93,27 +81,25 @@ class RobotEnv(gym.Env):
 
         self.pr.step()
         self.step_number += 1
+        max_action = 0.01
 
-        # Normalize action to MAX_ACTION
+        curr_or_x, curr_or_y, curr_or_z = self.agent.get_orientation()
+
         pos_action = action[:3]
         length = np.linalg.norm(pos_action)
-        if length > MAX_ACTION:
-            pos_action *= MAX_ACTION/length
+        pos_action /= length
+        pos_action *= max_action
         
-        # Calculate new position and orientation
         new_x, new_y, new_z = self.agent.get_position() + pos_action
-        curr_or_x, curr_or_y, curr_or_z = self.agent.get_orientation()
         new_or_z = (curr_or_z + action[3]) % (2 * np.pi)
-
-        # If within range, move agent
         radius = self.get_current_radius()
+
+        # If within range, move
         if abs(new_x) <= radius and abs(new_y) <= radius and new_z >= self.goal_pos[2] and new_z < MAX_HEIGHT:
             self.agent.set_position([new_x, new_y, new_z])
 
-        # Rotate agent
         self.agent.set_orientation([curr_or_x, curr_or_y, new_or_z])
 
-        # Calculate reward
         dist_factor = 1
         or_factor = 0.01
         distance = self.get_distance_to_goal() * dist_factor
@@ -122,6 +108,9 @@ class RobotEnv(gym.Env):
 
         done = False
         truncated = False
+
+        # print("distance: ", self.get_distance_to_goal())
+        # print("orientation_difference: ", self.get_orientation_diff_z())
 
         if self.get_distance_to_goal() < 0.01:
             print("Reached goal distance!")
@@ -133,7 +122,8 @@ class RobotEnv(gym.Env):
             print("Reached goal!!")
             done = True
             reward = 200
-        if self.step_number == MAX_EPISODE_LENGTH:
+        if self.step_number == 1:
+            # print("Failed to reach goal")
             done = True
             truncated = True
             self.step_number = 0
@@ -141,6 +131,18 @@ class RobotEnv(gym.Env):
         time.sleep(self.sleep)
         if done:
             time.sleep(self.sleep * 100)
+
+        current = Shape.create(PrimitiveShape.SPHERE,
+                               size=[0.01, 0.01, 0.01],
+                               position=self.agent.get_position(),
+                               color=[0, 255, 0])
+        # current = Dummy.create(size=0.01)
+        current.set_dynamic(False)
+        current.set_renderable(False)
+        current.set_collidable(False)
+        current.set_detectable(False)
+        # current.set_color([0, 0, 255])
+        # current.set_position(self.agent.get_position())
 
         return self._get_state(), reward, done, truncated, {}
 
@@ -165,10 +167,11 @@ class RobotEnv(gym.Env):
         self.pr.shutdown()  # Close the application
 
     def get_random_agent_pos(self):
-        radius = self.get_current_radius(initial=True)
+        z = np.random.uniform(self.goal_pos[2], MAX_HEIGHT)
+        radius = self.get_current_radius(z=z)
         x = np.random.uniform(-radius, radius)
         y = np.random.uniform(-radius, radius)
-        z = MAX_HEIGHT
+        # z = 1
         return [x, y, z]
 
     def get_random_agent_orientation(self):
@@ -190,11 +193,13 @@ class RobotEnv(gym.Env):
         diff = abs(z - tz)
         return min(diff, 2 * np.pi - diff)
 
-    def get_current_radius(self, initial=False):
+    def get_current_radius(self, initial=False, z=None):
         min_height = self.goal_pos[2]
         current_height = self.agent.get_position()[2]
 
         if initial:
             current_height = MAX_HEIGHT
+        if z is not None:
+            current_height = z
 
         return MIN_RADIUS + ((current_height - min_height) / (MAX_HEIGHT - min_height)) * (MAX_RADIUS - MIN_RADIUS)
