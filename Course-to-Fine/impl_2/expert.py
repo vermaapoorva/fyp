@@ -13,6 +13,8 @@ import numpy as np
 from math import pi
 from fractions import Fraction
 
+from tqdm import trange
+
 def expert_policy(env):
     agent_position = env.agent.get_position()
     agent_orientation = env.agent.get_orientation()
@@ -33,19 +35,46 @@ def expert_policy(env):
     return action
 
 
-def collect_data():
+def collect_data(num_rollouts=20):
 
     logdir = "logs/"
     env = Monitor(gym.make("RobotEnv-v0"), "logs/")
 
-    for i in range(10000000000000):
-        env.reset()
+    returns = []
+    observations = []
+    actions = []
+
+    for i in trange(num_rollouts):
+
+        print("iter", i)
+        obs = env.reset()
         done = False
+        total_return = 0
+        steps = 0
+
         while not done:
-            action = expert_policy(env)
-            obs, reward, done, truncated, info = env.step(action)
+            expert_action = expert_policy(env)
+            observations.append(obs)
+            actions.append(expert_action)
+            obs, reward, done, truncated, info = env.step(expert_action)
+            total_return += reward
+            steps += 1
             if done:
                 break
+
+        returns.append(total_return)
+
+    print("returns", returns)
+    print("mean return", np.mean(returns))
+    print("std of return", np.std(returns))
+
+    expert_data = {"observations": np.array(observations),
+                     "actions": np.array(actions)}
+
+    output_file = "expert_data_" + str(num_rollouts) + ".pkl"
+    with open(output_file, "wb") as f:
+        pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
+
 
 if __name__ == "__main__":
     collect_data()

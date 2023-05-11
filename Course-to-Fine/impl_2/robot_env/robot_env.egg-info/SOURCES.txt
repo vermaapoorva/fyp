@@ -7,3 +7,4 @@ robot_env.egg-info/requires.txt
 robot_env.egg-info/top_level.txt
 robot_env/envs/__init__.py
 robot_env/envs/robot_env.py
+robot_env/envs/robot_env_show_range.py

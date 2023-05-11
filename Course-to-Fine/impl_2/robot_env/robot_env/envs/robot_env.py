@@ -6,16 +6,15 @@ import numpy as np
 from PIL import Image
 
 from pyrep import PyRep
-from pyrep.const import PrimitiveShape
-from pyrep.objects import VisionSensor, Object, Dummy, Shape
+from pyrep.objects import VisionSensor, Object, Shape
 from os.path import dirname, join, abspath
 
 import time
 SCENE_FILE = join(dirname(abspath(__file__)), 'robot_env.ttt')
 
 # Bottleneck position+orientation
-BOTTLENECK_X = 0.07
-BOTTLENECK_Y = -0.085
+BOTTLENECK_X = -0.06
+BOTTLENECK_Y = 0.04
 BOTTLENECK_Z = 0.7
 BOTTLENECK_ORIENTATION_Z = -np.pi/9
 
@@ -60,8 +59,9 @@ class RobotEnv(gym.Env):
         self.agent = VisionSensor("camera")
         self.goal_camera = VisionSensor("goal_camera")
         self.target = Object("target")
-        self.initial_target_pos = self.target.get_position()
+        self.initial_target_pos = [0, 0, 0.58]
         self.table.set_position([0, 0, 0.5])
+        self.target.set_position(self.initial_target_pos)
 
         # Set goal position+orientation and capture goal image
         self.goal_pos = [BOTTLENECK_X, BOTTLENECK_Y, BOTTLENECK_Z]
@@ -74,12 +74,11 @@ class RobotEnv(gym.Env):
         self.agent.set_position(self.get_random_agent_pos())
         self.agent.set_orientation(self.get_random_agent_orientation())
 
+        self.max_distance_to_goal = self.get_max_distance_to_goal()
+
     def _get_state(self):
         current = self._get_current_image(self.agent)
         return current.transpose(2, 0, 1)
-
-    def get_agent(self):
-        return self.agent
 
     def _get_current_image(self, camera):
         self.pr.step()
@@ -114,22 +113,23 @@ class RobotEnv(gym.Env):
         self.agent.set_orientation([curr_or_x, curr_or_y, new_or_z])
 
         # Calculate reward
-        dist_factor = 1
-        or_factor = 0.01
-        distance = self.get_distance_to_goal() * dist_factor
-        orientation_difference = (self.get_orientation_diff_z()/np.pi) * or_factor
-        reward = - (distance + orientation_difference)
+        dist_factor = 0.9
+        or_factor = 0.1
+
+        distance = self.get_distance_to_goal()/self.max_distance_to_goal
+        orientation_difference = self.get_orientation_diff_z()/np.pi
+        reward = - (distance*dist_factor + orientation_difference*or_factor)
 
         done = False
         truncated = False
 
-        if self.get_distance_to_goal() < 0.01:
-            print("Reached goal distance!")
+        # if self.get_distance_to_goal() < 0.01:
+        #     print("Reached goal distance!")
             # reward = 10
-        if self.get_orientation_diff_z() < 0.1:
-            print("Reached goal orientation!")
+        # if self.get_orientation_diff_z() < 0.1:
+        #     print("Reached goal orientation!")
             # reward = 1
-        if self.get_distance_to_goal() < 0.01 and self.get_orientation_diff_z() < 0.1:
+        if self.get_distance_to_goal() < 0.001 and self.get_orientation_diff_z() < 0.01:
             print("Reached goal!!")
             done = True
             reward = 200
@@ -153,7 +153,7 @@ class RobotEnv(gym.Env):
         self.agent.set_position(self.get_random_agent_pos())
         self.agent.set_orientation(self.get_random_agent_orientation())
         
-        # self.target.set_position(self.initial_target_pos)
+        self.target.set_position(self.initial_target_pos)
 
         return self._get_state(), {}  # reward, done, info can't be included
 
@@ -198,3 +198,14 @@ class RobotEnv(gym.Env):
             current_height = MAX_HEIGHT
 
         return MIN_RADIUS + ((current_height - min_height) / (MAX_HEIGHT - min_height)) * (MAX_RADIUS - MIN_RADIUS)
+
+    def get_max_distance_to_goal(self):
+        max_radius = self.get_current_radius(initial=True)
+
+        corner_1 = np.linalg.norm(np.array([max_radius, max_radius, MAX_HEIGHT]) - np.array(self.goal_pos))
+        corner_2 = np.linalg.norm(np.array([-max_radius, max_radius, MAX_HEIGHT]) - np.array(self.goal_pos))
+        corner_3 = np.linalg.norm(np.array([max_radius, -max_radius, MAX_HEIGHT]) - np.array(self.goal_pos))
+        corner_4 = np.linalg.norm(np.array([-max_radius, -max_radius, MAX_HEIGHT]) - np.array(self.goal_pos))
+
+        max_distance_to_goal = max(corner_1, corner_2, corner_3, corner_4)
+        return max_distance_to_goal
