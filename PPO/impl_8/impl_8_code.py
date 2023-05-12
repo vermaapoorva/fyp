@@ -106,7 +106,7 @@ class AvgRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 15
+iter = 17
 logdir = "logs/logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 tensorboard_callback = TensorBoardOutputFormat(tensorboard_log_dir + "/Average final reward_" + str(iter))
@@ -122,13 +122,22 @@ def train():
         os.makedirs(tensorboard_log_dir)
 
     policy_kwargs = dict(
-        net_arch=dict(pi=[128, 256, 256, 128], vf=[128, 256, 256, 128])
+        net_arch=dict(pi=[128, 256, 128], vf=[128, 256, 128])
     )
 
     # for PPO25+27, logs13
     # net_arch=dict(pi=[128, 256, 512, 128], vf=[128, 256, 512, 128])
 
-    # model = PPO.load("logs/logs14/best_model.zip", env=env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    # for PPO28, logs14
+    # net_arch=dict(pi=[128, 256, 256, 128], vf=[128, 256, 256, 128])
+
+    # for PPO29, logs16
+    # net_arch=dict(pi=[128, 256, 128], vf=[128, 256, 128]) i think?
+
+    # for PPO30, logs17
+    # net_arch=dict(pi=[128, 256, 128], vf=[128, 256, 128])
+
+    # model = PPO.load("logs/logs16/best_model.zip", env=env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
     model = PPO('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, verbose=0, tensorboard_log=tensorboard_log_dir)
 
     # model.set_env(env)
@@ -139,7 +148,7 @@ def train():
 
     # Train the agent
     timesteps = 500000000
-    model.learn(total_timesteps=int(timesteps), callback=[save_best_model_callback, avg_reward_callback])
+    model.learn(total_timesteps=int(timesteps), callback=[save_best_model_callback])
     plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "PPO")
     plt.show()
 

@@ -106,8 +106,15 @@ class RobotEnv8(gym.Env):
 
         # If within range, move agent
         radius = self.get_current_radius()
-        if abs(new_x) <= radius and abs(new_y) <= radius and new_z >= self.goal_pos[2] and new_z < MAX_HEIGHT:
-            self.agent.set_position([new_x, new_y, new_z])
+        if abs(new_x) > radius:
+            new_x = radius
+        if abs(new_y) > radius:
+            new_y = radius
+        if new_z < self.goal_pos[2]:
+            new_z = self.goal_pos[2]
+        if new_z > MAX_HEIGHT:
+            new_z = MAX_HEIGHT
+        self.agent.set_position([new_x, new_y, new_z])
 
         # Rotate agent
         self.agent.set_orientation([curr_or_x, curr_or_y, new_or_z])
@@ -123,13 +130,13 @@ class RobotEnv8(gym.Env):
         done = False
         truncated = False
 
-        if self.get_distance_to_goal() < 0.01:
-            print("Reached goal distance!")
+        # if self.get_distance_to_goal() < 0.01:
+        #     print("Reached goal distance!")
             # reward = 10
-        if self.get_orientation_diff_z() < 0.1:
-            print("Reached goal orientation!")
+        # if self.get_orientation_diff_z() < 0.1:
+        #     print("Reached goal orientation!")
             # reward = 1
-        if self.get_distance_to_goal() < 0.01 and self.get_orientation_diff_z() < 0.1:
+        if self.get_distance_to_goal() < 0.001 and self.get_orientation_diff_z() < 0.01:
             print("Reached goal!!")
             done = True
             reward = 200
