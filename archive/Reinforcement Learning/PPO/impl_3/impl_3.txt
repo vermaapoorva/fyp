@@ -1,0 +1,3 @@
+add image in state
+works for 0.1 step sizes
+trains in ~1-1.2M episodes

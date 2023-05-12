@@ -1,1 +1,0 @@
-learns to reach within 0.01m of target position (instead of within _m of the target object) from random start location

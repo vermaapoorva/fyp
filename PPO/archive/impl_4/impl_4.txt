@@ -1,3 +1,0 @@
-make paths non linear
-works for 0.1 step size in ~1.2M episodes
-works for 0.01 step size in ~600k episodes
