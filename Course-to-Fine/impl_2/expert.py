@@ -43,6 +43,8 @@ def collect_data(num_rollouts=20):
     returns = []
     observations = []
     actions = []
+    distances_to_goal = []
+    orientation_z_diffs = []
 
     for i in trange(num_rollouts):
 
@@ -63,10 +65,18 @@ def collect_data(num_rollouts=20):
                 break
 
         returns.append(total_return)
+        distances_to_goal.append(env.get_distance_to_goal())
+        orientation_z_diffs.append(env.get_orientation_diff_z())
 
     print("returns", returns)
     print("mean return", np.mean(returns))
     print("std of return", np.std(returns))
+    print("distances to goal", distances_to_goal)
+    print("mean distance to goal", np.mean(distances_to_goal))
+    print("std of distance to goal", np.std(distances_to_goal))
+    print("orientation z diffs", orientation_z_diffs)
+    print("mean orientation z diff", np.mean(orientation_z_diffs))
+    print("std of orientation z diff", np.std(orientation_z_diffs))
 
     expert_data = {"observations": np.array(observations),
                      "actions": np.array(actions)}
