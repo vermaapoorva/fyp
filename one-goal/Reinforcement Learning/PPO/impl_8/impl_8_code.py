@@ -162,7 +162,7 @@ def run_model():
     total_episodes = 0
     successful_episodes = 0
     distances_to_goal = []
-    orientation_difference_z = []
+    orientation_differences_z = []
     while total_episodes < 100:
         obs, _ = env.reset()
         done = False
@@ -181,21 +181,21 @@ def run_model():
             env.render()
 
         distance_to_goal = env.get_distance_to_goal()
-        orientation_difference_z
+        orientation_difference_z = env.get_orientation_diff_z()
 
         if not truncated:
             successful_episodes += 1
             print(f"Episode {total_episodes} successful! Distance to goal: {distance_to_goal}. Orientation difference z: {orientation_difference_z}")
         
         distances_to_goal.append(distance_to_goal)
-        orientation_difference_z.append(orientation_difference_z)
+        orientation_differences_z.append(orientation_difference_z)
 
     print(f"Number of successful episodes: {successful_episodes}")
     print(f"Number of total episodes: {total_episodes}")
     print(f"Distance Accuracy = Average distance to goal: {np.mean(distances_to_goal)}")
-    print(f"Orientation Accuracy = Average orientation difference z: {np.mean(orientation_difference_z)}")
+    print(f"Orientation Accuracy = Average orientation difference z: {np.mean(orientation_differences_z)}")
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
 
 if __name__ == '__main__':
-    train()
-    # run_model()
+    # train()
+    run_model()
