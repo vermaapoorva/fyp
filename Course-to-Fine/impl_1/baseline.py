@@ -19,7 +19,7 @@ import time
 import gymnasium as gym
 from gymnasium import spaces
 
-SCENE_FILE = join(dirname(abspath(__file__)), 'impl_8_scene.ttt')
+SCENE_FILE = join(dirname(abspath(__file__)), 'baseline_scene.ttt')
 
 class RobotEnvBaseline():
 
@@ -180,14 +180,14 @@ def collect_data():
     x_train = []
     y_train = []
     completed = 0
-    while len(x_train) < 100000:
+    while len(x_train) < 10:
         print("Current len of x_train: ", len(x_train))
         state = env.reset()
         state, reward, done, truncated, _ = env.step()
         while not done:
             x_train.append(state)
             state, reward, done, truncated, _ = env.step()
-            y_train.append(action)
+            y_train.append([1, 1, 1])
 
         if not truncated:
             completed += 1
@@ -245,6 +245,9 @@ def train_model():
     # Load the dataset
     x_train = np.load('x_train.npy') # input images
     y_train = np.load('y_train.npy') # output 3x1 column matrices
+
+    print("x_train.shape: ", x_train.shape)
+    print("y_train.shape: ", y_train.shape)
 
     # Preprocess the dataset
     x_train = x_train.astype('float32') / 255
@@ -332,6 +335,6 @@ def evaluate_model():
     accuracy = np.mean(dists_when_reached_target)
     print("Average distance to target: ", accuracy)
 
-# collect_data()
+collect_data()
 train_model()
 # evaluate_model()

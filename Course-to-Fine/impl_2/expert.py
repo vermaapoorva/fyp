@@ -49,7 +49,7 @@ def collect_data(num_rollouts=20):
     for i in trange(num_rollouts):
 
         print("iter", i)
-        obs = env.reset()
+        obs, _ = env.reset()
         done = False
         total_return = 0
         steps = 0
@@ -87,4 +87,4 @@ def collect_data(num_rollouts=20):
 
 
 if __name__ == "__main__":
-    collect_data()
+    collect_data(50)
