@@ -111,13 +111,9 @@ class RobotEnv(gym.Env):
         # If within range, move agent
         radius = self.get_current_radius()
         if abs(new_x) > radius:
-            print("Hit radius on x! new_x: " + str(new_x) + " radius: " + str(radius))
             new_x = radius * np.sign(new_x)
-            print("new_x: " + str(new_x))
         if abs(new_y) > radius:
-            print("Hit radius on y! new_y: " + str(new_y) + " radius: " + str(radius))
             new_y = radius * np.sign(new_y)
-            print("new_y: " + str(new_y))
         if new_z < self.goal_pos[2]:
             new_z = self.goal_pos[2]
         if new_z > MAX_HEIGHT:

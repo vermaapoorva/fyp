@@ -12,14 +12,17 @@ import robot_env
 from stable_baselines3.common.monitor import Monitor
 from tqdm import trange
 import os
+from tensorflow.python.keras import backend as K
+print(K._get_available_gpus())
 
 SPLIT_RATIO = 0.8
 MODEL_INDEX = 1
 NUM_EPOCHS = 500
-BATCH_SIZE = 512
-POSITION_COEFFICIENT = 1e-3
-ORIENTATION_COEFFICIENT = 1
-DROPOUT_RATE = 0.3
+BATCH_SIZE = 32
+POSITION_COEFFICIENT = 1
+ORIENTATION_COEFFICIENT = 0.01
+DROPOUT_RATE = 0.2
+LEARNING_RATE = 0.001
 
 def load_data(file):
     with open(file, 'rb') as f:
@@ -63,29 +66,25 @@ def train_model(data_file):
 
     # Create model
     model = Sequential([
-        Conv2D(128, (3, 3), activation='relu', input_shape=input_shape),
-        MaxPooling2D((2, 2)),
-        Conv2D(256, (3, 3), activation='relu'),
-        MaxPooling2D((2, 2)),
-        Conv2D(256, (3, 3), activation='relu'),
-        MaxPooling2D((2, 2)),
+        Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
+        MaxPooling2D((2, 2), strides=(2, 2)),
+        Conv2D(48, (3, 3), activation='relu'),
+        MaxPooling2D((2, 2), strides=(2, 2)),
+        Conv2D(64, (3, 3), activation='relu'),
+        MaxPooling2D((2, 2), strides=(2, 2)),
         Conv2D(128, (3, 3), activation='relu'),
         MaxPooling2D((2, 2)),
         Flatten(),
-        Dense(256, activation='relu'),
+        Dense(200, activation='relu'),
         Dropout(DROPOUT_RATE),
-        Dense(128, activation='relu'),
+        Dense(200, activation='relu'),
         Dropout(DROPOUT_RATE),
-        Dense(64, activation='relu'),
+        Dense(50, activation='relu'),
         Dropout(DROPOUT_RATE),
         Dense(output_nodes)
     ])
 
-    # checkpoint_dir = './training_checkpoints/model_' + str(MODEL_INDEX) + '/cp-{epoch:04d}.ckpt'
-
-    # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_dir,
-    #                                                 save_weights_only=True,
-    #                                                 verbose=1)
+    callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=15, mode='min')
 
     # Compile the model with a loss function and optimizer
     model.compile(loss=custom_loss, optimizer='adam')
@@ -115,7 +114,7 @@ def train_model(data_file):
 def run_model():
     print("Running model")
 
-    model = load_model("models/model_" + str(MODEL_INDEX) + ".h5")
+    model = load_model("models/model_" + str(MODEL_INDEX) + ".h5", custom_objects={'custom_loss': custom_loss})
     env = Monitor(gym.make("RobotEnv-v0"), "logs")
 
     # Evaluate the trained model
@@ -124,7 +123,7 @@ def run_model():
     distances_to_goal = []
     orientation_z_diffs = []
 
-    for i in trange(50):
+    for i in trange(30):
 
         obs, _ = env.reset()
         done = False

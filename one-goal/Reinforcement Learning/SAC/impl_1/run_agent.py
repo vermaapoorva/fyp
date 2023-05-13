@@ -80,13 +80,13 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 1
+iter = 2
 logdir = "logs/logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 
 def train():
 
-    env = make_vec_env("RobotEnvSAC-v0", n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
+    env = make_vec_env("RobotEnv-v0", n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
 
     if not os.path.exists(logdir):
         os.makedirs(logdir)
@@ -99,7 +99,7 @@ def train():
     )
 
     # model = SAC.load("logs/logs16/best_model.zip", env=env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
-    model = SAC('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, verbose=0, tensorboard_log=tensorboard_log_dir)
+    model = SAC('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir, device="cuda")
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
@@ -112,7 +112,7 @@ def train():
 
 def run_model():
 
-    env = Monitor(gym.make("RobotEnvSAC-v0", headless=True, image_size=64, sleep=0), logdir)
+    env = Monitor(gym.make("RobotEnv-v0", headless=True, image_size=64, sleep=0), logdir)
 
     model_path = f"{logdir}/best_model.zip"
     model = SAC.load(model_path, env=env)
