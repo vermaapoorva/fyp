@@ -80,7 +80,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 ###################################   USING THE ENVIRONMENT   ###################################
 #################################################################################################
 
-iter = 2
+iter = 3
 logdir = "logs/logs" + str(iter)
 tensorboard_log_dir = "tensorboard_logs"
 
@@ -99,15 +99,15 @@ def train():
         use_sde=False
     )
 
-    model = SAC.load("logs/logs2/best_model.zip", env=env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
-    # model = SAC('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, buffer_size=100000, verbose=1, tensorboard_log=tensorboard_log_dir, device="cuda")
+    # model = SAC.load("logs/logs2/best_model.zip", env=env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = SAC('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, buffer_size=100000, verbose=1, tensorboard_log=tensorboard_log_dir, device="cuda")
 
     # Create the callbacks
     save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
 
     # Train the agent
     timesteps = 500000000
-    model.learn(total_timesteps=int(timesteps), callback=[save_best_model_callback], reset_num_timesteps=False)
+    model.learn(total_timesteps=int(timesteps), callback=[save_best_model_callback])
     plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "SAC")
     plt.show()
 
