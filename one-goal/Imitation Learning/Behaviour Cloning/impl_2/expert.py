@@ -3,6 +3,16 @@ import numpy as np
 import tensorflow as tf
 import gymnasium as gym
 
+
+# from pathlib import Path
+# import sys
+
+# # Get the path to the parent directory
+# parent_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+
+# # Add the parent directory to sys.path
+# sys.path.append(str(parent_dir))
+# print(sys.path)
 import robot_env
 
 from stable_baselines3.common.env_util import make_vec_env
@@ -38,7 +48,7 @@ def expert_policy(env):
 def collect_data(num_rollouts=20):
 
     logdir = "logs/"
-    env = Monitor(gym.make("RobotEnv-v0"), logdir)
+    env = Monitor(gym.make("RobotEnv-v2"), logdir)
 
     returns = []
     observations = []
@@ -85,4 +95,4 @@ def collect_data(num_rollouts=20):
 
 
 if __name__ == "__main__":
-    collect_data(100)
+    collect_data(500)

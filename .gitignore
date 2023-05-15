@@ -2,5 +2,5 @@
 # */logs
 # */tensorboard_logs
 # */__pycache__
-*.npy
-*.h5
+# *.npy
+archive/

@@ -148,7 +148,7 @@ class RobotEnv(gym.Env):
         #     print("Reached goal orientation!")
             # reward = 1
         if self.get_distance_to_goal() < DISTANCE_THRESHOLD and self.get_orientation_diff_z() < ANGLE_THRESHOLD:
-            print("Reached goal!!")
+            # print("Reached goal!!")
             done = True
             reward = 200
         if self.step_number == MAX_EPISODE_LENGTH:
@@ -173,7 +173,7 @@ class RobotEnv(gym.Env):
         
         self.target.set_position(self.initial_target_pos)
 
-        return self._get_state(), {}  # reward, done, info can't be included
+        return self._get_state(), {}
 
     def render(self, mode='human'):
         return
