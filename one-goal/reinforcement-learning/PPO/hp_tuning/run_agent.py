@@ -73,19 +73,19 @@ def train(scene_file_name, bottleneck, hyperparameters, hyperparam_i, scene_num)
         model = PPO.load(model_path, env=env, tensorboard_log=tensorboard_log_dir)
     else:
         reset_num_timesteps = True
-        model = PPO('CnnPolicy', env, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+        model = PPO('CnnPolicy', env, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=0, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     # callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=150, verbose=1)
     eval_callback = EvalCallback(eval_env,
                                     best_model_save_path=logdir,
                                     log_path=logdir,
-                                    eval_freq=1000,
+                                    eval_freq=100000,
                                     # callback_on_new_best=callback_on_best,
-                                    verbose=1)
+                                    verbose=0)
 
-    # Train the agent for 10M timesteps or until it reaches the reward threshold
-    timesteps = 10000000
+    # Train the agent for 5M timesteps or until it reaches the reward threshold
+    timesteps = 5000000
     model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=reset_num_timesteps)
 
 def run_model():
@@ -142,6 +142,10 @@ if __name__ == '__main__':
                         {"net_arch": [128, 256, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
                         {"net_arch": [128, 256, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
                         {"net_arch": [128, 256, 128], "batch_size": 16384, "n_steps": 8192}, # rollout buffer size: 8192*16*2 = 262144, updates: 262144/16384 = 16
+                        {"net_arch": [32, 48, 64, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+                        {"net_arch": [32, 48, 64, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+                        {"net_arch": [32, 48, 64, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
+                        {"net_arch": [32, 48, 64, 128], "batch_size": 16384, "n_steps": 8192}, # rollout buffer size: 8192*16*2 = 262144, updates: 262144/16384 = 16
                     ]
 
     scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
@@ -159,14 +163,13 @@ if __name__ == '__main__':
     if not os.path.exists("/vol/bitbucket/av1019/PPO/hyperparameters"):
         os.makedirs("/vol/bitbucket/av1019/PPO/hyperparameters")
 
-    hp_indexes = [0, 1]
-    # hp_indexes = [2, 3]
+    hp_indexes = [2]
 
+    scene_indexes = [0]
 
     for i in hp_indexes:
-        scene_num = 1
-        for scene_file_name, bottleneck in scenes:
-
+        for scene_num in scene_indexes:
+            scene_file_name, bottleneck = scenes[scene_num]
             # Save the hyperparameters, scene name and bottleneck to a file, create it if it doesn't exist
             with open(f"/vol/bitbucket/av1019/PPO/hyperparameters/hps_{i}_scene_{scene_num}.txt", "w+") as f:
                 f.write(f"Scene: {scene_file_name}\n")

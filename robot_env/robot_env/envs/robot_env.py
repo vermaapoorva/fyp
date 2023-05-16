@@ -67,12 +67,6 @@ class RobotEnv(gym.Env):
         self.pr = PyRep()
         self.pr.launch(SCENE_FILE, headless=headless)
         self.pr.start()  # Start the simulation
-        
-        print("scene file: ", SCENE_FILE)
-        print("BOTTLENECK_X: ", BOTTLENECK_X)
-        print("BOTTLENECK_Y: ", BOTTLENECK_Y)
-        print("BOTTLENECK_Z: ", BOTTLENECK_Z)
-        print("BOTTLENECK_ORIENTATION_Z: ", BOTTLENECK_ORIENTATION_Z)
 
         self.step_number = 0
         self.done = False
@@ -89,7 +83,8 @@ class RobotEnv(gym.Env):
         self.goal_camera.set_position(self.goal_pos)
         self.goal_camera.set_orientation(self.goal_orientation)
         img = Image.fromarray(self._get_current_image(self.goal_camera))
-        img.save("goal.jpg")
+        scene_name_without_ttt = file_name.split(".")[0]
+        img.save(f"goal_{scene_name_without_ttt}.jpg")
 
         self.agent.set_position(self.get_random_agent_pos())
         self.agent.set_orientation(self.get_random_agent_orientation())
@@ -146,14 +141,6 @@ class RobotEnv(gym.Env):
         distance = self.get_distance_to_goal()/self.max_distance_to_goal
         orientation_difference = self.get_orientation_diff_z()/np.pi
         reward = - (distance*dist_factor + orientation_difference*or_factor)
-
-        # print("agent position: ", self.agent.get_position())
-        # print("goal position: ", self.goal_pos)
-        # print("distance to goal: ", self.get_distance_to_goal())
-        # print("normalized distance to goal: ", distance)
-        # print("orientation difference: ", self.get_orientation_diff_z())
-        # print("normalized orientation difference: ", orientation_difference)
-        # print("reward: ", reward)
 
         done = False
         truncated = False
