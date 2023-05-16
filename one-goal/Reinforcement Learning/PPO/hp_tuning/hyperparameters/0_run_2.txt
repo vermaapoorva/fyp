@@ -1,3 +1,0 @@
-Scene: robot_env.ttt
-Bottleneck: [-0.06, 0.04, 0.7, -0.34906585039]
-Hyperparameters: {'net_arch': [128, 128], 'batch_size': 4096, 'n_steps': 2048}

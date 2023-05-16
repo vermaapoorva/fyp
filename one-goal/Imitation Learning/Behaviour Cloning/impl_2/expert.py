@@ -45,7 +45,7 @@ def expert_policy(env):
     return action
 
 
-def collect_data(num_rollouts=20):
+def collect_data(num_of_samples=20):
 
     logdir = "logs/"
     env = Monitor(gym.make("RobotEnv-v2"), logdir)
@@ -56,9 +56,8 @@ def collect_data(num_rollouts=20):
     distances_to_goal = []
     orientation_z_diffs = []
 
-    for i in trange(num_rollouts):
+    while len(observations) < num_of_samples:
 
-        print("iter", i)
         obs, _ = env.reset()
         done = False
         total_return = 0
@@ -71,6 +70,12 @@ def collect_data(num_rollouts=20):
             obs, reward, done, truncated, info = env.step(expert_action)
             total_return += reward
             steps += 1
+            if len(observations) >= num_of_samples:
+                break
+
+            if(len(observations) % 10000 == 0):
+                print("amount of data:", len(observations))
+                print(len(observations) / num_of_samples * 100, "%")
 
         returns.append(total_return)
         distances_to_goal.append(env.get_distance_to_goal())
@@ -89,10 +94,10 @@ def collect_data(num_rollouts=20):
     expert_data = {"observations": np.array(observations),
                      "actions": np.array(actions)}
 
-    output_file = "expert_data_" + str(num_rollouts) + ".pkl"
+    output_file = "expert_data_" + str(num_of_samples) + ".pkl"
     with open(output_file, "wb") as f:
         pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
-    collect_data(500)
+    collect_data(5000000)
