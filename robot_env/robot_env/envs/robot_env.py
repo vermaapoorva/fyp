@@ -36,13 +36,16 @@ ANGLE_THRESHOLD = 0.01
 class RobotEnv(gym.Env):
     """Custom Environment that follows gym interface"""
 
+    metadata = {'render_modes': ['rgb_array']}
+
     def __init__(self,
-                headless=True,
-                image_size=64,
-                sleep=0,
-                file_name="robot_env.ttt",
-                bottleneck=[BOTTLENECK_X, BOTTLENECK_Y, BOTTLENECK_Z, BOTTLENECK_ORIENTATION_Z]):
+                 file_name,
+                 bottleneck,
+                 headless=True,
+                 image_size=64,
+                 sleep=0,):
         super(RobotEnv, self).__init__()
+        self.metadata = {'render_modes': ['rgb_array']}
         print("initialising robot env...")
 
         SCENE_FILE = join(dirname(abspath(__file__)), "scenes/" + file_name)
@@ -84,9 +87,7 @@ class RobotEnv(gym.Env):
         self.goal_pos = [BOTTLENECK_X, BOTTLENECK_Y, BOTTLENECK_Z]
         self.goal_orientation = [-np.pi, 0, BOTTLENECK_ORIENTATION_Z]
         self.goal_camera.set_position(self.goal_pos)
-        self.pr.step()
         self.goal_camera.set_orientation(self.goal_orientation)
-        self.pr.step()
         img = Image.fromarray(self._get_current_image(self.goal_camera))
         img.save("goal.jpg")
 
@@ -102,14 +103,9 @@ class RobotEnv(gym.Env):
     def _get_current_image(self, camera):
         self.pr.step()
         image = camera.capture_rgb()
-        print(image)
         resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
         resized = cv2.resize(resized, (self.image_size, self.image_size), interpolation = cv2.INTER_AREA)
-        # Save image for debugging
-        img = Image.fromarray(resized)
-        img.save(f"img_{self.step_number}.jpg")
         resized = resized.astype(np.uint8)
-        print(resized)
         return resized
 
     def step(self, action):
@@ -151,13 +147,13 @@ class RobotEnv(gym.Env):
         orientation_difference = self.get_orientation_diff_z()/np.pi
         reward = - (distance*dist_factor + orientation_difference*or_factor)
 
-        print("agent position: ", self.agent.get_position())
-        print("goal position: ", self.goal_pos)
-        print("distance to goal: ", self.get_distance_to_goal())
-        print("normalized distance to goal: ", distance)
-        print("orientation difference: ", self.get_orientation_diff_z())
-        print("normalized orientation difference: ", orientation_difference)
-        print("reward: ", reward)
+        # print("agent position: ", self.agent.get_position())
+        # print("goal position: ", self.goal_pos)
+        # print("distance to goal: ", self.get_distance_to_goal())
+        # print("normalized distance to goal: ", distance)
+        # print("orientation difference: ", self.get_orientation_diff_z())
+        # print("normalized orientation difference: ", orientation_difference)
+        # print("reward: ", reward)
 
         done = False
         truncated = False
@@ -196,7 +192,7 @@ class RobotEnv(gym.Env):
 
         return self._get_state(), {}
 
-    def render(self, mode='human'):
+    def render(self, mode='rgb_array'):
         return
 
     def close (self):
