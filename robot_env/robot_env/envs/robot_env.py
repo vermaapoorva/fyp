@@ -69,7 +69,6 @@ class RobotEnv(gym.Env):
         self.pr.start()  # Start the simulation
 
         self.step_number = 0
-        self.done = False
 
         self.table = Shape("table")
         self.agent = VisionSensor("camera")
@@ -91,6 +90,12 @@ class RobotEnv(gym.Env):
 
         self.max_distance_to_goal = self.get_max_distance_to_goal()
 
+    def get_agent_position(self):
+        return self.agent.get_position()
+    
+    def get_agent_orientation(self):
+        return self.agent.get_orientation()
+
     def _get_state(self):
         current = self._get_current_image(self.agent)
         return current.transpose(2, 0, 1)
@@ -104,6 +109,8 @@ class RobotEnv(gym.Env):
         return resized
 
     def step(self, action):
+        if action is None:
+            return self._get_state(), 0.0, False, False, {}
 
         self.pr.step()
         self.step_number += 1
@@ -168,16 +175,16 @@ class RobotEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        
+        final_distance_to_goal = self.get_distance_to_goal()
+        final_orientation_diff_z = self.get_orientation_diff_z()
         self.step_number = 0
-        self.done = False
 
         self.agent.set_position(self.get_random_agent_pos())
         self.agent.set_orientation(self.get_random_agent_orientation())
         
         self.target.set_position(self.initial_target_pos)
 
-        return self._get_state(), {}
+        return self._get_state(), {"final_distance": final_distance_to_goal, "final_orientation": final_orientation_diff_z}
 
     def render(self, mode='rgb_array'):
         return

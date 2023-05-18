@@ -28,6 +28,51 @@ from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_r
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, StopTrainingOnRewardThreshold
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
+from stable_baselines3 import PPO
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+
+
+class CustomCNN(BaseFeaturesExtractor):
+    """
+    :param observation_space: (gym.Space)
+    :param features_dim: (int) Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    """
+
+    def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
+        super().__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        n_input_channels = observation_space.shape[0]
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(32, 48, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(48, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Flatten()
+        )
+
+        # Compute shape by doing one forward pass
+        with th.no_grad():
+            n_flatten = self.cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        return self.linear(self.cnn(observations))
+
+
 def train(scene_file_name, bottleneck, hyperparameters, hyperparam_i, scene_num):
 
     print("Training on scene: " + scene_file_name)
@@ -63,30 +108,26 @@ def train(scene_file_name, bottleneck, hyperparameters, hyperparam_i, scene_num)
     n_steps = hyperparameters["n_steps"]
 
     policy_kwargs = dict(
+        # features_extractor_class=CustomCNN,
+        # features_extractor_kwargs=dict(features_dim=512),
         net_arch=dict(pi=net_arch, vf=net_arch)
     )
 
-    # Continue training if a model was already trained
-    model_path = f"{logdir}/best_model.zip"
-    if os.path.exists(model_path):
-        reset_num_timesteps = False
-        model = PPO.load(model_path, env=env, tensorboard_log=tensorboard_log_dir)
-    else:
-        reset_num_timesteps = True
-        model = PPO('CnnPolicy', env, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=0, tensorboard_log=tensorboard_log_dir)
+    model = PPO('CnnPolicy', env, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
-    # callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=150, verbose=1)
     eval_callback = EvalCallback(eval_env,
                                     best_model_save_path=logdir,
                                     log_path=logdir,
-                                    eval_freq=100000,
+                                    eval_freq=20000,
                                     # callback_on_new_best=callback_on_best,
-                                    verbose=0)
+                                    deterministic=True,
+                                    verbose=1)
 
     # Train the agent for 5M timesteps or until it reaches the reward threshold
     timesteps = 5000000
-    model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=reset_num_timesteps)
+    model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
+    model.save(f"{logdir}/final_model.zip")
 
 def run_model():
 
@@ -137,15 +178,15 @@ if __name__ == '__main__':
     hyperparameters = [{"net_arch": [128, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
                         {"net_arch": [128, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
                         {"net_arch": [128, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
-                        {"net_arch": [128, 128], "batch_size": 16384, "n_steps": 8192}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
                         {"net_arch": [128, 256, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
                         {"net_arch": [128, 256, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
                         {"net_arch": [128, 256, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
-                        {"net_arch": [128, 256, 128], "batch_size": 16384, "n_steps": 8192}, # rollout buffer size: 8192*16*2 = 262144, updates: 262144/16384 = 16
                         {"net_arch": [32, 48, 64, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
                         {"net_arch": [32, 48, 64, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
                         {"net_arch": [32, 48, 64, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
-                        {"net_arch": [32, 48, 64, 128], "batch_size": 16384, "n_steps": 8192}, # rollout buffer size: 8192*16*2 = 262144, updates: 262144/16384 = 16
+                        {"net_arch": [32, 64], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+                        {"net_arch": [32, 64], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+                        {"net_arch": [32, 64], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
                     ]
 
     scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
@@ -163,9 +204,10 @@ if __name__ == '__main__':
     if not os.path.exists("/vol/bitbucket/av1019/PPO/hyperparameters"):
         os.makedirs("/vol/bitbucket/av1019/PPO/hyperparameters")
 
-    hp_indexes = [2]
+    hp_indexes = [8]
 
-    scene_indexes = [0]
+    # scene_indexes = [0, 1, 2]
+    scene_indexes = [3, 4, 5]
 
     for i in hp_indexes:
         for scene_num in scene_indexes:

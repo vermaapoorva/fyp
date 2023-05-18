@@ -23,7 +23,7 @@ SPLIT_RATIO = 0.8
 # DATA_FILE = "expert_data_500.pkl"
 
 POSITION_COEFFICIENT = 1
-ORIENTATION_COEFFICIENT = 0.01
+ORIENTATION_COEFFICIENT = 0.8
 
 def load_data(file):
     with open(file, 'rb') as f:
@@ -45,8 +45,6 @@ def custom_loss(action_true, action_pred):
     return loss
 
 def train_model(model_index,
-                position_coefficient,
-                orientation_coefficient,
                 num_epochs,
                 batch_size,
                 dropout_rate,
@@ -55,8 +53,8 @@ def train_model(model_index,
     
     print("Training model")
 
-    POSITION_COEFFICIENT = position_coefficient
-    ORIENTATION_COEFFICIENT = orientation_coefficient
+    # POSITION_COEFFICIENT = position_coefficient
+    # ORIENTATION_COEFFICIENT = orientation_coefficient
     MODEL_INDEX = model_index
     NUM_EPOCHS = num_epochs
     BATCH_SIZE = batch_size
@@ -87,7 +85,21 @@ def train_model(model_index,
 
     # Create model
     print("Creating model...")
+
+    # NatureCNN architecture used as default feature extractor PPO
+    # nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+    # nn.ReLU(),
+    # nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+    # nn.ReLU(),
+    # nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
+    # nn.ReLU(),
+    # nn.Flatten(),
+
+
     model = Sequential([
+        # Conv2D(32, (8, 8), strides=(4, 4), padding='same', activation='relu', input_shape=input_shape),
+        # Conv2D(64, (4, 4), strides=(2, 2), padding='same', activation='relu'),
+        # Conv2D(64, (3, 3), strides=(1, 1), padding='same', activation='relu'),
         Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
         MaxPooling2D((2, 2), strides=(2, 2)),
         Conv2D(48, (3, 3), activation='relu'),
@@ -106,7 +118,8 @@ def train_model(model_index,
         Dense(output_nodes)
     ])
 
-    callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, mode='min')
+    earlyStoppingCallback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, mode='min')
+    learningRateSchedulerCallback = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
     # Compile the model with a loss function and optimizer
     print("Compiling the model...")
@@ -114,7 +127,7 @@ def train_model(model_index,
 
     # Train the model
     print("Training the model...")
-    history = model.fit(obs_train, action_train, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, verbose=1, validation_data=(obs_val, action_val))
+    history = model.fit(obs_train, action_train, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, callbacks=[earlyStoppingCallback, learningRateSchedulerCallback], verbose=1, validation_data=(obs_val, action_val))
 
     # Save the training history
     print("Saving the training history...")
