@@ -2,6 +2,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 import gymnasium as gym
+
 import os
 import robot_env
 
@@ -12,56 +13,31 @@ from stable_baselines3.common.monitor import Monitor
 import numpy as np
 from math import pi
 from fractions import Fraction
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 
 from tqdm import trange
 
 def expert_policy(env):
-    # agent_position = env.agent.get_position()
-    # agent_orientation = env.agent.get_orientation()
-    # goal_position = env.goal_pos
-    # goal_orientation = env.goal_orientation
+    agent_position = env.agent.get_position()
+    agent_orientation = env.agent.get_orientation()
+    goal_position = env.goal_pos
+    goal_orientation = env.goal_orientation
 
-    # agents = env.get_attr("agent")
-    agent_positions = env.env_method("get_agent_position")
-    agent_orientations = env.env_method("get_agent_orientation")
-    goal_positions = env.get_attr("goal_pos")
-    goal_orientations = env.get_attr("goal_orientation")
+    x_diff = goal_position[0] - agent_position[0]
+    y_diff = goal_position[1] - agent_position[1]
+    z_diff = goal_position[2] - agent_position[2]
+    orientation_diff_z = goal_orientation[2] - agent_orientation[2]
 
-    x_diffs = []
-    y_diffs = []
-    z_diffs = []
-    orientation_diffs_z = []
-    actions = []
+    if orientation_diff_z < -np.pi:
+        orientation_diff_z += 2 * np.pi
+    elif orientation_diff_z > np.pi:
+        orientation_diff_z -= 2 * np.pi
 
-    for i in range(len(agent_positions)):
-        x_diffs.append(goal_positions[i][0] - agent_positions[i][0])
-        y_diffs.append(goal_positions[i][1] - agent_positions[i][1])
-        z_diffs.append(goal_positions[i][2] - agent_positions[i][2])
-        orientation_diff_z = goal_orientations[i][2] - agent_orientations[i][2]
-        if orientation_diff_z < -np.pi:
-            orientation_diff_z += 2 * np.pi
-        elif orientation_diff_z > np.pi:
-            orientation_diff_z -= 2 * np.pi
-        orientation_diffs_z.append(orientation_diff_z)
+    action = np.array([x_diff, y_diff, z_diff, orientation_diff_z], dtype=np.float32)
+    return action
 
-    for i in range(len(x_diffs)):
-        action = np.array([x_diffs[i], y_diffs[i], z_diffs[i], orientation_diffs_z[i]], dtype=np.float32)
-        actions.append(action)
 
-    # x_diff = goal_position[0] - agent_position[0]
-    # y_diff = goal_position[1] - agent_position[1]
-    # z_diff = goal_position[2] - agent_position[2]
-    # orientation_diff_z = goal_orientation[2] - agent_orientation[2]
-
-    # if orientation_diff_z < -np.pi:
-    #     orientation_diff_z += 2 * np.pi
-    # elif orientation_diff_z > np.pi:
-    #     orientation_diff_z -= 2 * np.pi
-
-    return actions
-
-def collect_data(scene_file_name, bottleneck, num_of_samples=100):
+def collect_data(scene_file_name, bottleneck, num_of_samples=20):
 
     # If behavioural cloning directory doesn't exist create it
     if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning"):
@@ -80,88 +56,88 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=100):
     print("Number of samples:", num_of_samples)
 
     logdir = "/vol/bitbucket/av1019/behavioural-cloning/hyperparameters/expert_data/"
-    # env = Monitor(gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck), logdir)
+    
+    env = Monitor(gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck), "logs/")
 
-    env = make_vec_env("RobotEnv-v2",
-                        n_envs=16,
-                        vec_env_cls=SubprocVecEnv,
-                        env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
-
-    returns = [[] for _ in range(env.num_envs)]
+    returns = []
     observations = []
     actions = []
     distances_to_goal = []
     orientation_z_diffs = []
+    images = []
 
     while len(observations) < num_of_samples:
 
-        obss = env.reset()
-        
-        dones = np.zeros((env.num_envs,), dtype=bool)
-        total_return = np.zeros((env.num_envs,))
+        obs, _ = env.reset()
+        done = False
+        total_return = 0
         steps = 0
 
-        while not np.all(dones):
-            expert_actions = expert_policy(env)
+        while not done:
+            expert_action = expert_policy(env)
+            images.append(obs)
+            # change obs type to float32
+            obs = obs.astype(np.float32)
+            obs = obs / 255.0
+            if len(observations)==0:
+                print(obs)
+            observations.append(obs)
+            actions.append(expert_action)
+            obs, reward, done, truncated, info = env.step(expert_action)
+            total_return += reward
+            steps += 1
 
-            # Only step in not done environments
-            active_envs = np.logical_not(dones)
-            active_actions = [action if active else None for action, active in zip(expert_actions, active_envs)]
-            env.step_async(active_actions)
-            active_obss, active_rewards, active_dones, _ = env.step_wait()
-
-            # Filter out None actions and observations
-            active_actions = [action for action in active_actions if action is not None]
-            active_obss = [obs for obs, action in zip(active_obss, active_actions) if action is not None]
-
-            observations += active_obss
-            actions += active_actions
-
-            # Update return for each environment
-            for i in np.where(active_envs)[0]:
-                total_return[i] += active_rewards[i]
-
-            # Update the done status for active environments
-            dones = np.logical_or(dones, active_dones)
-            steps += np.sum(active_envs)
-
-            # if len(observations) >= num_of_samples:
-            #     break
-
-            if(len(observations) % 100 == 0):
+            if(len(observations) % 10000 == 0):
                 print("amount of data:", len(observations))
                 print(len(observations) / num_of_samples * 100, "%")
 
-        # Append returns for each environment separately
-        for i, ret in enumerate(total_return):
-            returns[i].append(ret)
+        returns.append(total_return)
+        distances_to_goal.append(env.get_distance_to_goal())
+        orientation_z_diffs.append(env.get_orientation_diff_z())
 
-        # Append final distance and orientation to distance and orientation lists
-        for info in env.reset_infos:
-            distances_to_goal.append(info["final_distance"])
-            orientation_z_diffs.append(info["final_orientation"])
-
+    # print("returns", returns)
     print("mean return", np.mean(returns))
     print("std of return", np.std(returns))
+    # print("distances to goal", distances_to_goal)
     print("mean distance to goal", np.mean(distances_to_goal))
     print("std of distance to goal", np.std(distances_to_goal))
+    # print("orientation z diffs", orientation_z_diffs)
     print("mean orientation z diff", np.mean(orientation_z_diffs))
     print("std of orientation z diff", np.std(orientation_z_diffs))
-
-    scene = scene_file_name[:-4]
 
     expert_data = {"observations": np.array(observations),
                      "actions": np.array(actions)}
 
-    output_file = scene + "_expert_data_" + str(num_of_samples) + ".pkl"
-    with open(logdir + output_file, "wb") as f:
+
+    # file name without .ttt
+    scene_file_name = scene_file_name[:-4]
+    output_file = "expert_data_" + scene_file_name + "_" + str(num_of_samples) + ".pkl"
+    with open(output_file, "wb") as f:
         pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
 
-    # Save the above results to a txt file with scene
-    with open(logdir + scene + "_results.txt", "w") as f:
-        f.write("mean return: " + str(np.mean(returns)) + "\n")
-        f.write("std of return: " + str(np.std(returns)) + "\n")
-        f.write("mean distance to goal: " + str(np.mean(distances_to_goal)) + "\n")
-        f.write("std of distance to goal: " + str(np.std(distances_to_goal)) + "\n")
-        f.write("mean orientation z diff: " + str(np.mean(orientation_z_diffs)) + "\n")
-        f.write("std of orientation z diff: " + str(np.std(orientation_z_diffs)) + "\n")
+    # # Create images dir if not exist
+    # if not os.path.exists(os.path.join(logdir, "images")):
+    #     os.makedirs(os.path.join(logdir, "images"))
+    # # Save observations as images
+    # for i in range(len(images)):
+    #     image = images[i]
+    #     # make it channel last
+    #     image = np.transpose(image, (1, 2, 0))
+    #     # save image
+    #     image_file_name = "images/image_" + str(i) + ".png"
+    #     image_file_path = os.path.join(logdir, image_file_name)
+    #     plt.imsave(image_file_path, image)
+    env.close()
+
+if __name__ == "__main__":
+    scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
+            ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
+            ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
+            ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
+            ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
+            ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
+
+    # Collect 1M samples for each scene
+    num_of_samples = 10000
+    for scene in scenes[4:]:
+        collect_data(scene[0], scene[1], num_of_samples)

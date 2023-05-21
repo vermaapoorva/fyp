@@ -1,0 +1,165 @@
+Model net_arch_0_object_0
+Mean steps: 500.0
+Mean distance: 0.10416060302402814
+Mean orientation: 1.4164167734432396
+=====================================================================
+Model net_arch_0_object_2
+Mean steps: 500.0
+Mean distance: 0.06171709850081608
+Mean orientation: 1.5323645013947074
+=====================================================================
+Model net_arch_0_object_2
+Mean steps: 500.0
+Mean distance: 0.06171709850081608
+Mean orientation: 1.4324366158407844
+=====================================================================
+Model net_arch_0_object_1
+Mean steps: 500.0
+Mean distance: 0.11039492155694336
+Mean orientation: 1.5275141975389184
+=====================================================================
+Model net_arch_0_object_4
+Mean steps: 500.0
+Mean distance: 0.06379532838116288
+Mean orientation: 1.6124963104318888
+=====================================================================
+Model net_arch_1_object_0
+Mean steps: 500.0
+Mean distance: 0.09503208720817538
+Mean orientation: 1.7847923934279666
+=====================================================================
+Model net_arch_1_object_2
+Mean steps: 500.0
+Mean distance: 0.06171709850081608
+Mean orientation: 1.5988349749431063
+=====================================================================
+Model net_arch_1_object_1
+Mean steps: 500.0
+Mean distance: 0.11768601455196977
+Mean orientation: 1.1545865252841903
+=====================================================================
+Model net_arch_1_object_2
+Mean steps: 500.0
+Mean distance: 0.06171709850081608
+Mean orientation: 1.4138529430742715
+=====================================================================
+Model net_arch_1_object_4
+Mean steps: 500.0
+Mean distance: 0.05510362426440203
+Mean orientation: 1.5611307089886979
+=====================================================================
+Model net_arch_2_object_0
+Mean steps: 500.0
+Mean distance: 0.1109098553037995
+Mean orientation: 1.6046011136205904
+=====================================================================
+Model net_arch_0_object_5
+Mean steps: 500.0
+Mean distance: 0.3962436149819808
+Mean orientation: 1.511643270333919
+=====================================================================
+Model net_arch_2_object_1
+Mean steps: 500.0
+Mean distance: 0.16568040683950308
+Mean orientation: 2.1098785265189326
+=====================================================================
+Model net_arch_2_object_2
+Mean steps: 500.0
+Mean distance: 0.14767870704871552
+Mean orientation: 1.5943971612591334
+=====================================================================
+Model net_arch_2_object_2
+Mean steps: 500.0
+Mean distance: 0.14767870704871552
+Mean orientation: 1.8216555634924558
+=====================================================================
+Model net_arch_2_object_4
+Mean steps: 500.0
+Mean distance: 0.09500000149011688
+Mean orientation: 1.5926373733555927
+=====================================================================
+Model net_arch_3_object_0
+Mean steps: 500.0
+Mean distance: 0.09363271088736208
+Mean orientation: 1.687145926801554
+=====================================================================
+Model net_arch_3_object_1
+Mean steps: 500.0
+Mean distance: 0.16568040683950308
+Mean orientation: 1.4066922350657507
+=====================================================================
+Model net_arch_1_object_5
+Mean steps: 500.0
+Mean distance: 0.17327722608402038
+Mean orientation: 1.7804095691250026
+=====================================================================
+Model net_arch_3_object_2
+Mean steps: 500.0
+Mean distance: 0.06171709850081608
+Mean orientation: 1.3177897667761302
+=====================================================================
+Model net_arch_3_object_4
+Mean steps: 500.0
+Mean distance: 0.07320224458724393
+Mean orientation: 1.411499353936876
+=====================================================================
+Model net_arch_2_object_5
+Mean steps: 500.0
+Mean distance: 0.17327722608402038
+Mean orientation: 1.8106548443499337
+=====================================================================
+Model net_arch_4_object_1
+Mean steps: 500.0
+Mean distance: 0.4560153533113896
+Mean orientation: 1.77334283347484
+=====================================================================
+Model net_arch_0_object_3
+Mean steps: 500.0
+Mean distance: 0.09489123790301286
+Mean orientation: 1.6548013420502345
+=====================================================================
+Model net_arch_4_object_0
+Mean steps: 500.0
+Mean distance: 0.08827614579882938
+Mean orientation: 1.3540624675616668
+=====================================================================
+Model net_arch_4_object_2
+Mean steps: 500.0
+Mean distance: 0.4657821412222242
+Mean orientation: 0.9200052145414078
+=====================================================================
+Model net_arch_4_object_4
+Mean steps: 500.0
+Mean distance: 0.08008702555298922
+Mean orientation: 1.7042644411691203
+=====================================================================
+Model net_arch_3_object_5
+Mean steps: 500.0
+Mean distance: 0.3205247659070724
+Mean orientation: 2.890298467144811
+=====================================================================
+Model net_arch_1_object_3
+Mean steps: 500.0
+Mean distance: 0.11684605459260043
+Mean orientation: 1.9498777646259122
+=====================================================================
+Model net_arch_2_object_3
+Mean steps: 500.0
+Mean distance: 0.09067843332966169
+Mean orientation: 1.508958857309136
+=====================================================================
+Model net_arch_4_object_5
+Mean steps: 500.0
+Mean distance: 0.10965855257232014
+Mean orientation: 1.7456298759926754
+=====================================================================
+Model net_arch_3_object_3
+Mean steps: 500.0
+Mean distance: 0.08974570087088311
+Mean orientation: 1.5337650177581241
+=====================================================================
+Model net_arch_4_object_3
+Mean steps: 500.0
+Mean distance: 0.09368726599575432
+Mean orientation: 2.023930641247086
+=====================================================================
