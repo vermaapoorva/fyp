@@ -18,10 +18,18 @@ from matplotlib import pyplot as plt
 from tqdm import trange
 
 def expert_policy_to_bottleneck(env, bottleneck):
+
+    # print("calculating expert policy to bottleneck: ", bottleneck)
+
     agent_position = env.agent.get_position()
     agent_orientation = env.agent.get_orientation()
     goal_position = bottleneck[:3]
     goal_orientation = [-np.pi, 0, bottleneck[3]]
+
+    # print("agent_position: ", agent_position)
+    # print("agent_orientation: ", agent_orientation)
+    # print("goal_position: ", goal_position)
+    # print("goal_orientation: ", goal_orientation)
 
     x_diff = goal_position[0] - agent_position[0]
     y_diff = goal_position[1] - agent_position[1]
@@ -34,6 +42,7 @@ def expert_policy_to_bottleneck(env, bottleneck):
         orientation_diff_z -= 2 * np.pi
 
     action = np.array([x_diff, y_diff, z_diff, orientation_diff_z], dtype=np.float32)
+    # print("action: ", action)
     return action
 
 def expert_policy(env):
@@ -51,6 +60,8 @@ def expert_policy(env):
         orientation_diff_z += 2 * np.pi
     elif orientation_diff_z > np.pi:
         orientation_diff_z -= 2 * np.pi
+
+    orientation_diff_z = np.clip(orientation_diff_z, -0.03 * np.pi, 0.03 * np.pi)
 
     action = np.array([x_diff, y_diff, z_diff, orientation_diff_z], dtype=np.float32)
     return action
@@ -85,6 +96,13 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
     distances_to_goal = []
     orientation_z_diffs = []
     amount_of_data_collected = 0
+    images = []
+
+    # Get amount of data in file
+    if os.path.exists(logdir + output_file) and os.stat(logdir + output_file).st_size != 0:
+        with open(logdir + output_file, "rb") as f:
+            amount_of_data_collected = len(pickle.load(f))
+            print("amount of data:", amount_of_data_collected)
 
     translation_noise = 0.05
     rotation_noise = 0.03*np.pi
@@ -100,14 +118,19 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
         target = np.copy(bottleneck)
         target[0] += np.random.uniform(-translation_noise, translation_noise)
         target[1] += np.random.uniform(-translation_noise, translation_noise)
-        target[2] += np.random.uniform(0, translation_noise)
+        # target[2] += 
         target[3] += np.random.uniform(-rotation_noise, rotation_noise)
 
         env.goal_pos = target[:3]
         env.goal_orientation = [-np.pi, 0, target[3]]
+        
+        env.set_goal(env.goal_pos, env.goal_orientation)
 
         while not done:
             expert_action_to_bottleneck = expert_policy_to_bottleneck(env, bottleneck)
+
+            images.append(obs)
+
             # change obs type to float32
             obs = obs.astype(np.float32)
             obs = obs / 255.0
@@ -120,6 +143,8 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
             total_return += reward
             steps += 1
 
+        print("Episode completed in", steps, "steps.")
+
         # If file doesn't exist or is empty, create new one
         if not os.path.exists(logdir + output_file) or os.stat(logdir + output_file).st_size == 0:
             with open(logdir + output_file, "wb") as f:
@@ -128,8 +153,9 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
         else:
             with open(logdir + output_file, "rb") as f:
                 existing_data = pickle.load(f)
+            existing_data.extend(data)
             with open(logdir + output_file, "wb") as f:
-                pickle.dump(existing_data + data, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(existing_data, f, pickle.HIGHEST_PROTOCOL)
 
         returns.append(total_return)
         distances_to_goal.append(env.get_distance_to_goal())
@@ -152,17 +178,17 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
     #     pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
     # # Create images dir if not exist
-    # if not os.path.exists(os.path.join(logdir, "images")):
-    #     os.makedirs(os.path.join(logdir, "images"))
-    # # Save observations as images
-    # for i in range(len(images)):
-    #     image = images[i]
-    #     # make it channel last
-    #     image = np.transpose(image, (1, 2, 0))
-    #     # save image
-    #     image_file_name = "images/image_" + str(i) + ".png"
-    #     image_file_path = os.path.join(logdir, image_file_name)
-    #     plt.imsave(image_file_path, image)
+    if not os.path.exists(os.path.join(logdir, "images")):
+        os.makedirs(os.path.join(logdir, "images"))
+    # Save observations as images
+    for i in range(len(images)):
+        image = images[i]
+        # make it channel last
+        image = np.transpose(image, (1, 2, 0))
+        # save image
+        image_file_name = "images/image_" + str(i) + ".png"
+        image_file_path = os.path.join(logdir, image_file_name)
+        plt.imsave(image_file_path, image)
     env.close()
 
 if __name__ == "__main__":
@@ -174,6 +200,6 @@ if __name__ == "__main__":
             ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
 
     # Collect 1M samples for each scene
-    num_of_samples = 120000
-    for scene in scenes[5:]:
+    num_of_samples = 12000
+    for scene in scenes[0:1]:
         collect_data(scene[0], scene[1], num_of_samples)

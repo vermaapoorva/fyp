@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
+
 from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object, Shape
 from os.path import dirname, join, abspath
@@ -82,19 +83,25 @@ class RobotEnv(gym.Env):
         self.goal_camera.set_position(self.goal_pos)
         self.goal_camera.set_orientation(self.goal_orientation)
 
-        self.save_goal_image(file_name)
+        # self.save_goal_image(file_name)
 
         self.agent.set_position(self.get_random_agent_pos())
         self.agent.set_orientation(self.get_random_agent_orientation())
 
         self.max_distance_to_goal = self.get_max_distance_to_goal()
 
-    def save_goal_image(self):
-        image = self.goal_camera.capture_rgb()
-        resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
-        resized = resized.astype(np.uint8)
-        scene_name_without_ttt = file_name.split(".")[0]
-        resized.save(f"goal_{scene_name_without_ttt}.jpg")
+    # def save_goal_image(self, file_name):
+    #     image = self.goal_camera.capture_rgb()
+    #     resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
+    #     resized = resized.astype(np.uint8)
+    #     scene_name_without_ttt = file_name.split(".")[0]
+    #     # save image
+    #     Image.fromarray(resized).save("goal_" + scene_name_without_ttt + ".png")
+    #     # plt.imsave("goal_" + scene_name_without_ttt + ".png", resized)
+
+    def set_goal(self, goal_pos, goal_orientation):
+            self.goal_pos = goal_pos
+            self.goal_orientation = goal_orientation
 
     def get_agent_position(self):
         return self.agent.get_position()
@@ -209,7 +216,7 @@ class RobotEnv(gym.Env):
     def get_random_agent_orientation(self):
         x = self.goal_orientation[0]
         y = self.goal_orientation[1]
-        z = np.random.uniform(-np.pi, np.pi)
+        z = np.random.uniform(-np.pi/4, np.pi/4)
         # print("agent orientation:", [x, y, z])
         return [x, y, z]
     

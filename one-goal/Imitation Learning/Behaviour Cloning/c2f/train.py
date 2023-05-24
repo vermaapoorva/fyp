@@ -26,13 +26,13 @@ class ImageToPoseTrainerCoarse:
         self.loss_orientation_coefficient = 5e-5
 
         # Split obs_data into train and val
-        data_file = f"/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/150000_expert_data_{scene_name}.pkl"
+        data_file = f"/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/12000_expert_data_{scene_name}.pkl"
         with open(data_file, 'rb') as f:
                 data = pickle.loads(f.read())
         # train_size = int(0.8 * len(data))
         # val_size = len(data) - train_size
         train_size = amount_of_data
-        val_size = 0.2 * train_size
+        val_size = int(0.2 * train_size)
         # take the first train_size+val_size examples from the dataset
         data = Subset(data, range(train_size + val_size))
         print("Length of data: ", len(data))

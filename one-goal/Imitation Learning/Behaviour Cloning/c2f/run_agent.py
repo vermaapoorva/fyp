@@ -16,7 +16,7 @@ scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
             ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
             ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]    
 
-scene_index = 1
+# scene_index = 5
 
 net_archs = []
 
@@ -47,12 +47,13 @@ hyperparameters = [ {"net_arch": [64, 128, 256], "learning_rate": 0.001, "batch_
 # Network architecture: [32, 64, 128, 256], Number of trainable parameters: 541520
 # Network architecture: [64, 128, 128, 256], Number of trainable parameters: 671504
 
-# original_hyperparameters = {"net_arch": [32, 48, 64, 128], "learning_rate": 0.001, "batch_size": 32}
+original_hyperparameters = {"net_arch": [32, 48, 64, 128], "learning_rate": 0.001, "batch_size": 32}
 
-for i, hyperparameter in enumerate(hyperparameters):
-# for scene_index, scene in enumerate(scenes):
+# for i, hyperparameter in enumerate(hyperparameters):
+for scene_index, scene in enumerate(scenes):
+    hyperparameter = original_hyperparameters
 
-    name_of_task = f"100000_tuning_hp_og_patiences_results_scene_{scene_index}_hp_{i}"
+    name_of_task = f"noisy_data_original_hp_results_scene_{scene_index}"
 
     # file name without .ttt
     scene_file_name = scenes[scene_index][0][:-4]
@@ -60,7 +61,7 @@ for i, hyperparameter in enumerate(hyperparameters):
 
     trainer = ImageToPoseTrainerCoarse(task_name=name_of_task,
                                         hyperparameters=hyperparameter,
-                                        amount_of_data=100000,
+                                        amount_of_data=10000,
                                         scene_name=scene_file_name)
     
     start = time.process_time()
@@ -77,12 +78,13 @@ for i, hyperparameter in enumerate(hyperparameters):
                     "learning_rate": hyperparameter['learning_rate'],
                     "batch_size": hyperparameter['batch_size'],
                     "distance_error": distance_error,
-                    "orientation_error": orientation_error})
+                    "orientation_error": orientation_error,
+                    "training_time": end - start})
 
     # Sort results by orientation error
     results = sorted(results, key=lambda k: k['orientation_error'])
     print(results)
 
     # Save results
-    with open(f"/vol/bitbucket/av1019/behavioural-cloning/c2f/100000_tuning_hp_og_patiences_results_scene_{scene_index}.json", "w") as f:
+    with open(f"/vol/bitbucket/av1019/behavioural-cloning/c2f/noisy_data_original_hp_results_all_scenes.json", "w") as f:
         json.dump(results, f, indent=4)

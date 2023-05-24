@@ -190,7 +190,7 @@ class ImageToPoseTrainerCoarse:
 
         # Save checkpoint
         amount_of_data = len(self.training_loader.dataset)
-        checkpoint_path = self.bitbucket + 'Networks/' + str(self.task_name) + '/network_' str(amount_of_data) + '.torch'
+        checkpoint_path = self.bitbucket + 'Networks/' + str(self.task_name) + '/network_' + str(amount_of_data) + '.torch'
         self.image_to_pose_network.save_checkpoint(checkpoint_path)
         print(f"Saved checkpoint with {amount_of_data} training examples")
 
