@@ -1,5 +1,7 @@
 from reinforcement_learning import train, run_model, get_number_of_parameters
 import os
+from stable_baselines3.common.monitor import Monitor
+import gymnasium as gym
 
 if __name__ == '__main__':
 
@@ -39,18 +41,24 @@ if __name__ == '__main__':
 
     scene_indexes = [2]
     # scene_indexes = [3, 4, 5]
+    env = Monitor(gym.make("RobotEnv-v2", file_name=scenes[0][0], bottleneck=scenes[0][1], headless=True, image_size=64, sleep=0), "logs_arch/")
 
-    for i in hp_indexes:
-        for scene_num in scene_indexes:
-            scene_file_name, bottleneck = scenes[scene_num]
-            # Save the hyperparameters, scene name and bottleneck to a file, create it if it doesn't exist
-            with open(f"/vol/bitbucket/av1019/PPO/hyperparameters/values/hps_{i}_scene_{scene_num}.txt", "w+") as f:
-                f.write(f"Scene: {scene_file_name}\n")
-                f.write(f"Bottleneck: {bottleneck}\n")
-                f.write(f"Hyperparameters: {hyperparameters[i]}\n")
+    net_archs = [[32, 48, 64, 128], [32, 64, 128], [32, 64, 64, 128], [64, 128, 64]]
+    for net_arch in net_archs:
+        params = get_number_of_parameters(net_arch, env)
+        print(f"Net arch: {net_arch}, params: {params}")
 
-            # Train the model
-            print(f"Training model {i} on scene {scene_num} with hyperparameters {hyperparameters[i]}")
-            train(scene_file_name, bottleneck, hyperparameters[i], i, scene_num)
+    # for i in hp_indexes:
+    #     for scene_num in scene_indexes:
+    #         scene_file_name, bottleneck = scenes[scene_num]
+    #         # Save the hyperparameters, scene name and bottleneck to a file, create it if it doesn't exist
+    #         with open(f"/vol/bitbucket/av1019/PPO/hyperparameters/values/hps_{i}_scene_{scene_num}.txt", "w+") as f:
+    #             f.write(f"Scene: {scene_file_name}\n")
+    #             f.write(f"Bottleneck: {bottleneck}\n")
+    #             f.write(f"Hyperparameters: {hyperparameters[i]}\n")
+
+    #         # Train the model
+    #         print(f"Training model {i} on scene {scene_num} with hyperparameters {hyperparameters[i]}")
+    #         train(scene_file_name, bottleneck, hyperparameters[i], i, scene_num)
 
     # run_model()

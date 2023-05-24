@@ -21,9 +21,24 @@ class Network(torch.nn.Module):
     def save(self):
         torch.save(self.state_dict(), self.network_path)
 
+    def save_checkpoint(self, checkpoint_path):
+        torch.save(self.state_dict(), checkpoint_path)
+
     def load(self):
-        print('Loading network from: ' + str(self.network_path))
-        state_dict = torch.load(self.network_path)
+        # If the network file doesn't exist (it has not been trained yet), then create a new one.
+        if not os.path.exists(self.network_path):
+            print('Creating network at: ' + str(self.network_path))
+            self.save()
+
+        # Otherwise (it has already been trained), use the existing file.
+        else:
+            print('Loading network from: ' + str(self.network_path))
+            state_dict = torch.load(self.network_path)
+            self.load_state_dict(state_dict)
+
+    def load_from_checkpoint(self, checkpoint_path):
+        print('Loading network from: ' + str(checkpoint_path))
+        state_dict = torch.load(checkpoint_path)
         self.load_state_dict(state_dict)
 
     def set_eval_dropout(self):
@@ -83,10 +98,10 @@ class ImageToPoseNetworkCoarse(Network):
     def __init__(self, task_name, hyperparameters):
         # If the network directory doesn't exist (it has not been trained yet), then create a new one.
         # Otherwise (it has already been trained), use the existing directory.
-        if not os.path.exists('/vol/bitbucket/av1019/behavioural-cloning/c2f/Networks/' + str(task_name)):
-            os.makedirs('/vol/bitbucket/av1019/behavioural-cloning/c2f/Networks/' + str(task_name))
+        if not os.path.exists('/vol/bitbucket/av1019/dagger/hyperparameters/Networks/' + str(task_name)):
+            os.makedirs('/vol/bitbucket/av1019/dagger/hyperparameters/Networks/' + str(task_name))
         # Call the parent constructor, which will set the save path.
-        image_to_pose_network_path = '/vol/bitbucket/av1019/behavioural-cloning/c2f/Networks/' + str(task_name) + '/network.torch'
+        image_to_pose_network_path = '/vol/bitbucket/av1019/dagger/hyperparameters/Networks/' + str(task_name) + '/network.torch'
         Network.__init__(self, image_to_pose_network_path)
         # Define the network layers
 
@@ -135,6 +150,7 @@ class ImageToPoseNetworkCoarse(Network):
 
     def forward(self, input_image, height):
         # Compute the cnn features
+        input_image = input_image.to(torch.float32)
         height = height.to(torch.float32)
         image_features = self.conv(input_image)
         image_features_flat = torch.reshape(image_features, (input_image.shape[0], -1))

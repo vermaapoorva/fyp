@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 def run_model(task_name, scene_name, bottleneck, hyperparameters, num_of_runs=10):
-    print("Evaluating model...")
+    print("Running model")
 
     env = gym.make("RobotEnv-v2", file_name=scene_name, bottleneck=bottleneck)
 

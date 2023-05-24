@@ -14,9 +14,9 @@ import pickle
 
 class ImageToPoseTrainerCoarse:
 
-    def __init__(self, task_name, scene_name, amount_of_data, hyperparameters):
+    def __init__(self, task_name, hyperparameters):
 
-        self.bitbucket = '/vol/bitbucket/av1019/behavioural-cloning/c2f/'
+        self.bitbucket = '/vol/bitbucket/av1019/dagger/hyperparameters/'
         self.task_name = task_name
         # self.image_to_pose_dataset = ImageToPoseDatasetCoarse(task_name)
         self.image_to_pose_network = ImageToPoseNetworkCoarse(task_name, hyperparameters)
@@ -25,24 +25,21 @@ class ImageToPoseTrainerCoarse:
         self.init_learning_rate = hyperparameters['learning_rate']
         self.loss_orientation_coefficient = 5e-5
 
+        # create expert data folder if it doesn't exist
+        if not os.path.exists(f"{self.bitbucket}expert_data"):
+            os.makedirs(f"{self.bitbucket}expert_data")
+
         # Split obs_data into train and val
-        data_file = f"/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/150000_expert_data_{scene_name}.pkl"
-        with open(data_file, 'rb') as f:
-                data = pickle.loads(f.read())
+        self.data_file = f"{self.bitbucket}expert_data/{task_name}_data.pkl"
+        # with open(self.data_file, 'rb') as f:
+        #         data = pickle.loads(f.read())
         # train_size = int(0.8 * len(data))
         # val_size = len(data) - train_size
-        train_size = amount_of_data
-        val_size = 0.2 * train_size
-        # take the first train_size+val_size examples from the dataset
-        data = Subset(data, range(train_size + val_size))
-        print("Length of data: ", len(data))
-        train_data, val_data = torch.utils.data.random_split(data, [train_size, val_size])
-        print("Length of train data: ", len(train_data))
-        print("Length of val data: ", len(val_data))
+        # train_data, val_data = torch.utils.data.random_split(data, [train_size, val_size])
 
-        # Create the data loaders
-        self.training_loader = DataLoader(train_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
-        self.validation_loader = DataLoader(val_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
+        # # Create the data loaders
+        # self.training_loader = DataLoader(train_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
+        # self.validation_loader = DataLoader(val_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
 
         # INITIALISE THE NETWORK
         # Set the GPU
@@ -55,6 +52,24 @@ class ImageToPoseTrainerCoarse:
         self.patience = 15
         # self.lr_patience = 20
         # self.patience = 20
+
+    def get_data_file(self):
+        return self.data_file
+
+    def get_network(self):
+        return self.image_to_pose_network
+
+    def update_dataloaders(self):
+        # Split obs_data into train and val
+        with open(self.data_file, 'rb') as f:
+                data = pickle.loads(f.read())
+        train_size = int(0.8 * len(data))
+        val_size = len(data) - train_size
+        train_data, val_data = torch.utils.data.random_split(data, [train_size, val_size])
+
+        # Create new data loaders
+        self.training_loader = DataLoader(train_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
+        self.validation_loader = DataLoader(val_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
 
     def train(self):
         print('Training the network...')
@@ -172,6 +187,12 @@ class ImageToPoseTrainerCoarse:
 
         # Save the error, so it can be used as a prior on uncertainty
         np.save(self.bitbucket + 'Networks/' + str(self.task_name) + '/network_uncertainty_validation_error.npy', min_validation_error)
+
+        # Save checkpoint
+        amount_of_data = len(self.training_loader.dataset)
+        checkpoint_path = self.bitbucket + 'Networks/' + str(self.task_name) + '/network_' str(amount_of_data) + '.torch'
+        self.image_to_pose_network.save_checkpoint(checkpoint_path)
+        print(f"Saved checkpoint with {amount_of_data} training examples")
 
         # Return the minimum loss and error
         return min_validation_loss, min_validation_error

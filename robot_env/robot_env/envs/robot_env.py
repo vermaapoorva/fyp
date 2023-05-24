@@ -81,14 +81,20 @@ class RobotEnv(gym.Env):
         self.goal_orientation = [-np.pi, 0, BOTTLENECK_ORIENTATION_Z]
         self.goal_camera.set_position(self.goal_pos)
         self.goal_camera.set_orientation(self.goal_orientation)
-        img = Image.fromarray(self._get_current_image(self.goal_camera))
-        scene_name_without_ttt = file_name.split(".")[0]
-        img.save(f"goal_{scene_name_without_ttt}.jpg")
+
+        self.save_goal_image(file_name)
 
         self.agent.set_position(self.get_random_agent_pos())
         self.agent.set_orientation(self.get_random_agent_orientation())
 
         self.max_distance_to_goal = self.get_max_distance_to_goal()
+
+    def save_goal_image(self):
+        image = self.goal_camera.capture_rgb()
+        resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
+        resized = resized.astype(np.uint8)
+        scene_name_without_ttt = file_name.split(".")[0]
+        resized.save(f"goal_{scene_name_without_ttt}.jpg")
 
     def get_agent_position(self):
         return self.agent.get_position()

@@ -1,6 +1,8 @@
 from train import ImageToPoseTrainerCoarse
 from network import ImageToPoseNetworkCoarse
+from dagger_agent import train_model
 from evaluate import run_model
+
 import time
 import json
 import torch
@@ -16,14 +18,6 @@ scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
             ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
             ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]    
 
-scene_index = 1
-
-net_archs = []
-
-returns = []
-distance_errors = []
-orientation_errors = []
-results = []
 hyperparameters = [ {"net_arch": [64, 128, 256], "learning_rate": 0.001, "batch_size": 32},
                     {"net_arch": [64, 128, 256], "learning_rate": 0.0001, "batch_size": 32},
                     {"net_arch": [64, 128, 256], "learning_rate": 0.00001, "batch_size": 32},
@@ -47,29 +41,32 @@ hyperparameters = [ {"net_arch": [64, 128, 256], "learning_rate": 0.001, "batch_
 # Network architecture: [32, 64, 128, 256], Number of trainable parameters: 541520
 # Network architecture: [64, 128, 128, 256], Number of trainable parameters: 671504
 
-# original_hyperparameters = {"net_arch": [32, 48, 64, 128], "learning_rate": 0.001, "batch_size": 32}
+original_hyperparameters = {"net_arch": [32, 48, 64, 128],
+                            "learning_rate": 0.001,
+                            "batch_size": 32,
+                            "num_rollouts": 5,
+                            "num_dagger_iterations": 20}
 
-for i, hyperparameter in enumerate(hyperparameters):
-# for scene_index, scene in enumerate(scenes):
+# scene_index = 0
 
-    name_of_task = f"100000_tuning_hp_og_patiences_results_scene_{scene_index}_hp_{i}"
+results = []
 
-    # file name without .ttt
-    scene_file_name = scenes[scene_index][0][:-4]
-    # scene_file_name = scene[0][:-4]
+# for i, hyperparameter in enumerate(hyperparameters):
+for scene_index, scene in enumerate(scenes):
+    hyperparameter = original_hyperparameters
 
-    trainer = ImageToPoseTrainerCoarse(task_name=name_of_task,
-                                        hyperparameters=hyperparameter,
-                                        amount_of_data=100000,
-                                        scene_name=scene_file_name)
-    
+    # task_name = f"tuning_hp_og_patiences_results_scene_{scene_index}_hp_{i}"
+    task_name = f"original_hp_results_scene_{scene_index}"
+
+    scene_file_name, bottleneck = scenes[scene_index]
+
     start = time.process_time()
-    trainer.train()
+    train_model(task_name, scene_file_name, bottleneck, hyperparameter)
     end = time.process_time()
 
-    average_steps, distance_error, orientation_error = run_model(task_name=name_of_task,
-                                                    scene_name=scenes[scene_index][0],
-                                                    bottleneck=scenes[scene_index][1],
+    distance_error, orientation_error = run_model(task_name=task_name,
+                                                    scene_name=scene_file_name,
+                                                    bottleneck=bottleneck,
                                                     hyperparameters=hyperparameter,
                                                     num_of_runs=20)
 
@@ -77,12 +74,13 @@ for i, hyperparameter in enumerate(hyperparameters):
                     "learning_rate": hyperparameter['learning_rate'],
                     "batch_size": hyperparameter['batch_size'],
                     "distance_error": distance_error,
-                    "orientation_error": orientation_error})
+                    "orientation_error": orientation_error,
+                    "training_time": end - start})
 
     # Sort results by orientation error
     results = sorted(results, key=lambda k: k['orientation_error'])
     print(results)
 
     # Save results
-    with open(f"/vol/bitbucket/av1019/behavioural-cloning/c2f/100000_tuning_hp_og_patiences_results_scene_{scene_index}.json", "w") as f:
+    with open(f"/vol/bitbucket/av1019/dagger/hyperparameters/original_hp_results_all_scenes.json", "w") as f:
         json.dump(results, f, indent=4)
