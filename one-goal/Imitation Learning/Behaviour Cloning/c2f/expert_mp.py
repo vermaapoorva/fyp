@@ -85,7 +85,7 @@ def expert_policy_to_target(env):
 
     return actions
 
-def collect_data(scene_file_name, bottleneck, num_of_samples=20):
+def collect_data(scene_file_name, bottleneck, num_of_samples, task_name):
 
     # If behavioural cloning directory doesn't exist create it
     if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning"):
@@ -112,18 +112,19 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
                         env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
     scene_file_name = scene_file_name[:-4]
-    output_file = str(num_of_samples) + "_expert_data_" + scene_file_name + ".pkl"
+    output_file = task_name + ".pkl"
 
     returns = [[] for _ in range(env.num_envs)]
     amount_of_data_collected = 0
     distances_to_goal = []
     orientation_diffs_z = []
+    # images = []
 
     # Get amount of data in file
     if os.path.exists(logdir + output_file) and os.stat(logdir + output_file).st_size != 0:
         with open(logdir + output_file, "rb") as f:
             amount_of_data_collected = len(pickle.load(f))
-            print("amount of data:", amount_of_data_collected)
+            print("amount of data already collected:", amount_of_data_collected)
 
     translation_noise = 0.05
     rotation_noise = 0.03*np.pi
@@ -160,8 +161,6 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
             active_envs = np.logical_not(dones)
             active_envs_indices = [i for i in range(env.num_envs) if active_envs[i]]
             
-            # print("active envs:", active_envs_indices)
-
             expert_actions_to_bottleneck = expert_policy_to_bottleneck(env, bottleneck)
             expert_actions_to_target = expert_policy_to_target(env)
 
@@ -169,6 +168,8 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
                 image = obss[i]
                 action = expert_actions_to_bottleneck[i]
                 endpoint_height = env.env_method("get_agent_position", indices=i)[0][2]
+
+                # images.append(image)
 
                 # change image to float 32 and /255
                 image = image.astype(np.float32)
@@ -219,7 +220,7 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
 
     print("done collecting data")
     # print mean and std of returns, distances to goal and orientation z diffs
-    print("mean return:", np.mean(total_return))
+    print("mean return:", np.mean(returns))
     print("mean distance to goal:", np.mean(distances_to_goal))
     print("mean orientation z diff:", np.mean(orientation_diffs_z))
 
@@ -239,14 +240,23 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
     env.close()
 
 if __name__ == "__main__":
-    scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
-            ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
-            ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
-            ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
-            ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
-            ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
+    # scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
+    #         ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
+    #         ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
+    #         ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
+    #         ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
+    #         ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
+
+    scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.142]],
+            ["cutlery_block_scene.ttt", [-0.03, 0.01, 0.768, 0.351]],
+            ["cutlery_block_scene.ttt", [0.025, -0.045, 0.79, -0.424]]]
 
     # Collect 1M samples for each scene
-    num_of_samples = 12000
-    for scene in scenes[4:5]:
-        collect_data(scene[0], scene[1], num_of_samples)
+    num_of_samples = 1000000
+    scene_index = 2
+    run_index = 9
+    task_name = f"cutlery_block_scene_{scene_index}_{num_of_samples}_{run_index}"
+    collect_data(scene_file_name=scenes[scene_index][0],
+                    bottleneck=scenes[scene_index][1],
+                    num_of_samples=num_of_samples,
+                    task_name=task_name)
