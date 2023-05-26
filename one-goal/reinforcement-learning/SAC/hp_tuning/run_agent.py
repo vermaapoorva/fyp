@@ -1,12 +1,14 @@
 import gymnasium as gym
 from gymnasium import spaces
-from stable_baselines3 import SAC
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.evaluation import evaluate_policy
 import os
 import cv2
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 import robot_env
+from zipfile import ZipFile
+import pickle
 
 import numpy as np
 from PIL import Image
@@ -25,68 +27,52 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common import results_plotter
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, StopTrainingOnRewardThreshold
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
-#################################################################################################
-##########################################   CALLBACK   #########################################
-#################################################################################################
+from stable_baselines3 import PPO
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
-class SaveOnBestTrainingRewardCallback(BaseCallback):
-    """
-    Callback for saving a model (the check is done every ``check_freq`` steps)
-    based on the training reward (in practice, we recommend using ``EvalCallback``).
+def get_number_of_parameters(net_arch, env):
+    # Load the model from the zip file
+    # model = SAC.load(model_file_path)
 
-    :param check_freq:
-    :param model_dir: Path to the folder where the model will be saved.
-      It must contains the file created by the ``Monitor`` wrapper.
-    :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
-    """
-    def __init__(self, check_freq: int, logdir: str, verbose: int = 1):
-        super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
-        self.check_freq = check_freq
-        self.logdir = logdir
-        self.save_path = os.path.join(logdir, "best_model")
-        self.best_mean_reward = -np.inf
+    # Create CNN SAC model with net_arch policy+vf:
 
-    def _init_callback(self) -> None:
-        # Create folder if needed
-        if self.save_path is not None:
-            os.makedirs(self.save_path, exist_ok=True)
+    model = SAC('CnnPolicy', env, verbose=1, policy_kwargs=dict(net_arch=dict(pi=net_arch, qf=net_arch)))
 
-    def _on_step(self) -> bool:
-        if self.n_calls % self.check_freq == 0:
+    num_of_params = 0
+    policy_dict = model.get_parameters().get("policy")
+    for key, value in policy_dict.items():
+        
+        # Add numel if key contains pi_features_extractor, mlp_extractor.policy_net, action_net
+        if "pi_features_extractor" in key or "mlp_extractor.policy_net" in key or "action_net" in key:
+            num_of_params += value.numel()
+        
+    print("Number of parameters: ", num_of_params)
+    return num_of_params
 
-          # Retrieve training reward
-          x, y = ts2xy(load_results(self.logdir), "timesteps")
-          if len(x) > 0:
-              # Mean training reward over the last 100 episodes
-              mean_reward = np.mean(y[-100:])
-              if self.verbose >= 1:
-                print(f"Num timesteps: {self.num_timesteps}")
-                print(f"Best mean reward: {self.best_mean_reward:.2f} - Last mean reward per episode: {mean_reward:.2f}")
+def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
 
-              # New best model, you could save the agent here
-              if mean_reward > self.best_mean_reward:
-                  self.best_mean_reward = mean_reward
-                  # Example for saving best model
-                  if self.verbose >= 1:
-                    print(f"Saving new best model to {self.save_path}")
-                  self.model.save(self.save_path)
+    print("Training on scene: " + scene_file_name)
+    print("Bottleneck x: " + str(bottleneck[0]))
+    print("Bottleneck y: " + str(bottleneck[1]))
+    print("Bottleneck z: " + str(bottleneck[2]))
+    print("Bottleneck z angle: " + str(bottleneck[3]))
+    print("Hyperparameters: " + str(hyperparameters))
 
-        return True
+    logdir = f"/vol/bitbucket/av1019/SAC/logs/{task_name}/"
+    tensorboard_log_dir = f"/vol/bitbucket/av1019/SAC/tensorboard_logs/{task_name}/"
 
-#################################################################################################
-###################################   USING THE ENVIRONMENT   ###################################
-#################################################################################################
-
-iter = 2
-logdir = "logs/logs" + str(iter)
-tensorboard_log_dir = "tensorboard_logs"
-
-def train():
-
-    env = make_vec_env("RobotEnv-v0", n_envs=16, vec_env_cls=SubprocVecEnv, monitor_dir=logdir)
+    env = make_vec_env("RobotEnv-v2",
+                        n_envs=16,
+                        vec_env_cls=SubprocVecEnv,
+                        env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
+    
+    eval_env = make_vec_env("RobotEnv-v2",
+                        n_envs=1,
+                        vec_env_cls=SubprocVecEnv,
+                        env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
     if not os.path.exists(logdir):
         os.makedirs(logdir)
@@ -94,29 +80,38 @@ def train():
     if not os.path.exists(tensorboard_log_dir):
         os.makedirs(tensorboard_log_dir)
 
+    net_arch = hyperparameters["net_arch"]
+    batch_size = hyperparameters["batch_size"]
+    n_steps = hyperparameters["n_steps"]
+
     policy_kwargs = dict(
-        net_arch=dict(pi=[128, 256, 128], qf=[128, 256, 128]),
-        use_sde=False
+        net_arch=dict(pi=net_arch, qf=net_arch)
     )
 
-    model = SAC.load("logs/logs2/best_model.zip", env=env, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
-    # model = SAC('CnnPolicy', env, batch_size=4096, policy_kwargs=policy_kwargs, buffer_size=100000, verbose=1, tensorboard_log=tensorboard_log_dir, device="cuda")
+    model = SAC('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
-    save_best_model_callback = SaveOnBestTrainingRewardCallback(check_freq=1000, logdir=logdir)
+    eval_callback = EvalCallback(eval_env,
+                                    best_model_save_path=logdir,
+                                    log_path=logdir,
+                                    eval_freq=20000,
+                                    # callback_on_new_best=callback_on_best,
+                                    deterministic=True,
+                                    verbose=1)
 
-    # Train the agent
-    timesteps = 500000000
-    model.learn(total_timesteps=int(timesteps), callback=[save_best_model_callback], reset_num_timesteps=False)
-    plot_results([logdir], timesteps, results_plotter.X_TIMESTEPS, "SAC")
-    plt.show()
+    # Train the agent for 7.5M timesteps
+    timesteps = 7000000
+    model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
+    model.save(f"{logdir}/final_model.zip")
 
-def run_model():
+def run_model(hyperparam_i, scene_num):
 
-    env = Monitor(gym.make("RobotEnv-v0", headless=True, image_size=64, sleep=0), logdir)
+    logdir = f"/vol/bitbucket/av1019/PPO/logs/hp_{hyperparam_i}_scene_{scene_num}/"
+
+    env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0), logdir)
 
     model_path = f"{logdir}/best_model.zip"
-    model = SAC.load(model_path, env=env)
+    model = PPO.load(model_path, env=env)
 
     total_episodes = 0
     successful_episodes = 0
@@ -154,7 +149,3 @@ def run_model():
     print(f"Distance Accuracy = Average distance to goal: {np.mean(distances_to_goal)}")
     print(f"Orientation Accuracy = Average orientation difference z: {np.mean(orientation_differences_z)}")
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
-
-if __name__ == '__main__':
-    train()
-    # run_model()

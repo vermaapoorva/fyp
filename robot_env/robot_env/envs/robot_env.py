@@ -103,6 +103,10 @@ class RobotEnv(gym.Env):
             self.goal_pos = goal_pos
             self.goal_orientation = goal_orientation
 
+    def set_agent(self, agent_pos, agent_orientation):
+        self.agent.set_position(agent_pos)
+        self.agent.set_orientation(agent_orientation)
+
     def get_agent_position(self):
         return self.agent.get_position()
     

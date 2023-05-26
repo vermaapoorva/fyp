@@ -23,7 +23,8 @@ class ImageToPoseTrainerCoarse:
 
         self.minibatch_size = hyperparameters['batch_size']
         self.init_learning_rate = hyperparameters['learning_rate']
-        self.loss_orientation_coefficient = 5e-5
+        self.loss_orientation_coefficient = 0.01
+        # self.loss_orientation_coefficient = hyperparameters['or_coeff']
 
         # Split obs_data into train and val
         data_file = f"/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/12000_expert_data_{scene_name}.pkl"

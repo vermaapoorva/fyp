@@ -52,7 +52,7 @@ def get_number_of_parameters(net_arch, env):
     print("Number of parameters: ", num_of_params)
     return num_of_params
 
-def train(scene_file_name, bottleneck, hyperparameters, hyperparam_i, scene_num):
+def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
 
     print("Training on scene: " + scene_file_name)
     print("Bottleneck x: " + str(bottleneck[0]))
@@ -61,8 +61,8 @@ def train(scene_file_name, bottleneck, hyperparameters, hyperparam_i, scene_num)
     print("Bottleneck z angle: " + str(bottleneck[3]))
     print("Hyperparameters: " + str(hyperparameters))
 
-    logdir = f"/vol/bitbucket/av1019/PPO/logs/hp_{hyperparam_i}_scene_{scene_num}/"
-    tensorboard_log_dir = f"/vol/bitbucket/av1019/PPO/tensorboard_logs/hp_{hyperparam_i}_scene_{scene_num}/"
+    logdir = f"/vol/bitbucket/av1019/PPO/logs/{task_name}/"
+    tensorboard_log_dir = f"/vol/bitbucket/av1019/PPO/tensorboard_logs/{task_name}/"
 
     env = make_vec_env("RobotEnv-v2",
                         n_envs=16,
@@ -85,12 +85,12 @@ def train(scene_file_name, bottleneck, hyperparameters, hyperparam_i, scene_num)
     n_steps = hyperparameters["n_steps"]
 
     policy_kwargs = dict(
-        # features_extractor_class=CustomCNN,
-        # features_extractor_kwargs=dict(features_dim=512),
         net_arch=dict(pi=net_arch, vf=net_arch)
     )
 
-    model = PPO('CnnPolicy', env, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+
+    # model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     eval_callback = EvalCallback(eval_env,
@@ -102,11 +102,14 @@ def train(scene_file_name, bottleneck, hyperparameters, hyperparam_i, scene_num)
                                     verbose=1)
 
     # Train the agent for 7.5M timesteps
-    timesteps = 7500000
+    timesteps = 7000000
+    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
     model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
     model.save(f"{logdir}/final_model.zip")
 
-def run_model():
+def run_model(hyperparam_i, scene_num):
+
+    logdir = f"/vol/bitbucket/av1019/PPO/logs/hp_{hyperparam_i}_scene_{scene_num}/"
 
     env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0), logdir)
 

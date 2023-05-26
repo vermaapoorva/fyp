@@ -23,7 +23,7 @@ class ImageToPoseTrainerCoarse:
 
         self.minibatch_size = hyperparameters['batch_size']
         self.init_learning_rate = hyperparameters['learning_rate']
-        self.loss_orientation_coefficient = 5e-5
+        self.loss_orientation_coefficient = 0.01
 
         # create expert data folder if it doesn't exist
         if not os.path.exists(f"{self.bitbucket}expert_data"):
@@ -59,13 +59,15 @@ class ImageToPoseTrainerCoarse:
     def get_network(self):
         return self.image_to_pose_network
 
-    def update_dataloaders(self):
+    def update_dataloaders(self, amount_of_data):
         # Split obs_data into train and val
         with open(self.data_file, 'rb') as f:
                 data = pickle.loads(f.read())
-        train_size = int(0.8 * len(data))
-        val_size = len(data) - train_size
+        train_size = int(0.8 * amount_of_data)
+        val_size = amount_of_data - train_size
         train_data, val_data = torch.utils.data.random_split(data, [train_size, val_size])
+
+        print(f"Amount of data: {amount_of_data}, train size: {train_size}, val size: {val_size}")
 
         # Create new data loaders
         self.training_loader = DataLoader(train_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)

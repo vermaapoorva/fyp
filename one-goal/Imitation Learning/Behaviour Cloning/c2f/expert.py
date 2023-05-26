@@ -121,6 +121,9 @@ def collect_data(scene_file_name, bottleneck, num_of_samples=20):
         # target[2] += 
         target[3] += np.random.uniform(-rotation_noise, rotation_noise)
 
+        target[0] = np.clip(target[0], -0.1, 0.1)
+        target[1] = np.clip(target[1], -0.1, 0.1)
+
         env.goal_pos = target[:3]
         env.goal_orientation = [-np.pi, 0, target[3]]
         
@@ -201,5 +204,5 @@ if __name__ == "__main__":
 
     # Collect 1M samples for each scene
     num_of_samples = 12000
-    for scene in scenes[0:1]:
+    for scene in scenes[4:5]:
         collect_data(scene[0], scene[1], num_of_samples)
