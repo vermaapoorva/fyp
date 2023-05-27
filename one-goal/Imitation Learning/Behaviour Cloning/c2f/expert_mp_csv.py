@@ -3,6 +3,8 @@ import numpy as np
 import tensorflow as tf
 import gymnasium as gym
 
+from npy_append_array import NpyAppendArray
+
 import os
 import robot_env
 
@@ -15,12 +17,12 @@ from math import pi
 from fractions import Fraction
 from matplotlib import pyplot as plt
 
+import cv2
+
+import pandas as pd
+
 from tqdm import trange
 
-# Set seeds
-# seed = 20
-# np.random.seed(seed)
-# tf.random.set_seed(seed)
 
 def expert_policy_to_bottleneck(env, bottleneck):
     agent_positions = env.env_method("get_agent_position")
@@ -85,7 +87,7 @@ def expert_policy_to_target(env):
 
     return actions
 
-def collect_data(scene_file_name, bottleneck, num_of_samples, task_name):
+def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_index=0):
 
     # If behavioural cloning directory doesn't exist create it
     if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning"):
@@ -96,23 +98,34 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name):
         os.makedirs("/vol/bitbucket/av1019/behavioural-cloning/c2f")
 
     # If expert_data directory doesn't exist create it
-    if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data"):
-        os.makedirs("/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data")
+    logdir = "/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/"
+
+    # If expert_data directory doesn't exist create it
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
+
+    # scene_file_name = scene_file_name[:-4]
+    logdir += task_name + "/"
+
+    # If scene directory doesn't exist create it
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
 
     print("Collecting data for scene:", scene_file_name)
     print("Bottleneck:", bottleneck)
     print("Number of samples:", num_of_samples)
 
-    logdir = "/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data/"
-    
     # env = gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck)
     env = make_vec_env("RobotEnv-v2",
                         n_envs=16,
                         vec_env_cls=SubprocVecEnv,
                         env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
-    scene_file_name = scene_file_name[:-4]
-    output_file = task_name + ".pkl"
+    # scene_file_name = scene_file_name[:-4]
+    # output_file = task_name + ".pkl"
+    actions_file = f"{task_name}_{start_index}_actions.npy"
+    heights_file = f"{task_name}_{start_index}_heights.npy"
+    images_file = f"{task_name}_{start_index}_images.npy"
 
     returns = [[] for _ in range(env.num_envs)]
     amount_of_data_collected = 0
@@ -120,18 +133,31 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name):
     orientation_diffs_z = []
     # images = []
 
-    translation_noise = 0.05
+    translation_noise = 0.025
     rotation_noise = 0.03*np.pi
     data = []
+    amount_of_actions_collected = 0
+    amount_of_heights_collected = 0
 
-    # Get amount of data in file
-    if os.path.exists(logdir + output_file) and os.stat(logdir + output_file).st_size != 0:
-        with open(logdir + output_file, "rb") as f:
-            amount_of_data_collected = len(pickle.load(f))
+    # Get amount of data in npy file if they exist
+    if os.path.exists(logdir + actions_file):
+        saved_actions = np.load(logdir + actions_file)
+        amount_of_actions_collected = len(saved_actions)
     
+    if os.path.exists(logdir + heights_file):
+        saved_heights = np.load(logdir + heights_file)
+        amount_of_heights_collected = len(saved_heights)
+
+    if amount_of_actions_collected != amount_of_heights_collected:
+        print("Amount of actions and heights collected are not equal!")
+        print("Amount of actions collected: ", amount_of_actions_collected)
+        print("Amount of heights collected: ", amount_of_heights_collected)
+        return
+
+    amount_of_data_collected = amount_of_actions_collected
     print("amount of data already collected: ", amount_of_data_collected)
 
-    while len(data) < num_of_samples:
+    while amount_of_data_collected < num_of_samples:
 
         obss = env.reset()
         dones = np.zeros((env.num_envs,), dtype=bool)
@@ -154,8 +180,10 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name):
             goal_orientation = [-np.pi, 0, target[3]]
 
             env.env_method("set_goal", indices=i, goal_pos=goal_pos, goal_orientation=goal_orientation)
-            
-            # print("goal for env", i, ":", env.get_attr("goal_pos")[i], env.get_attr("goal_orientation")[i])
+
+        images = []
+        actions = []
+        heights = []
 
         while not np.all(dones):
             
@@ -170,13 +198,9 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name):
                 action = expert_actions_to_bottleneck[i]
                 endpoint_height = env.env_method("get_agent_position", indices=i)[0][2]
 
-                # images.append(image)
-
-                # change image to float 32 and /255
-                image = image.astype(np.float32)
-                image /= 255.0
-
-                data.append({"image": image, "action": action, "endpoint_height": endpoint_height})
+                images.append(image)
+                actions.append(action)
+                heights.append(endpoint_height)     
 
             # Get expert actions to target with current observation
             active_expert_actions_to_target = [expert_actions_to_target[i] if active_envs[i] else None for i in range(env.num_envs)]
@@ -192,18 +216,6 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name):
             # Update dones
             dones = np.logical_or(dones, active_dones)
                 
-        # If file doesn't exist or is empty, create new one
-        # if not os.path.exists(logdir + output_file) or os.stat(logdir + output_file).st_size == 0:
-        #     print("Creating new file")
-        #     with open(logdir + output_file, "wb") as f:
-        #         pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-        # # Else append to existing file
-        # else:
-        #     with open(logdir + output_file, "rb") as f:
-        #         existing_data = pickle.load(f)
-        #     with open(logdir + output_file, "wb") as f:
-        #         pickle.dump(existing_data + data, f, pickle.HIGHEST_PROTOCOL)
-
         # Append distances to goal and orientation z diffs
         for info in env.reset_infos:
             distances_to_goal.append(info["final_distance"])
@@ -213,37 +225,35 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name):
         for i in range(env.num_envs):
             returns[i].append(total_return[i])
 
-        print(f"{len(data)}/{num_of_samples} --- {(len(data)/num_of_samples)*100}%")
+        num_of_images_this_trajectory = 0
+        # Save images to img dir with index amount_of_data_collected+start_index
+        with NpyAppendArray(logdir + images_file) as image_file_npy:
+            for i in range(len(images)):
+                image = images[i]
+                image = image.astype(np.float32)
+                image /= 255.0
+                image = np.expand_dims(image, axis=0)
+                image_file_npy.append(image)
+                # print("image shape: ", image.shape)
+
+                amount_of_data_collected += 1
+                num_of_images_this_trajectory += 1
+                if amount_of_data_collected >= num_of_samples:
+                    break
         
-        # # Get amount of data in file
-        # with open(logdir + output_file, "rb") as f:
-        #     amount_of_data_collected = len(pickle.load(f))
-        #     # amount and percentage of data collected
-        #     print(f"{amount_of_data_collected}/{num_of_samples} --- {(amount_of_data_collected/num_of_samples)*100}%")
+        # Append actions and heights to file
+        with NpyAppendArray(logdir + actions_file) as action_file_npy:
+            action_file_npy.append(np.array(actions[:num_of_images_this_trajectory]))
+        with NpyAppendArray(logdir + heights_file) as heights_file_npy:
+            heights_file_npy.append(np.array(heights[:num_of_images_this_trajectory]))
+
+        print(f"{amount_of_data_collected}/{num_of_samples} --- {(amount_of_data_collected/num_of_samples)*100}%")
 
     print("done collecting data")
     # print mean and std of returns, distances to goal and orientation z diffs
     print("mean return:", np.mean(returns))
     print("mean distance to goal:", np.mean(distances_to_goal))
     print("mean orientation z diff:", np.mean(orientation_diffs_z))
-
-    print("saving data to file")
-    with open(logdir + output_file, "wb") as f:
-        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-    print("done saving data to file")
-
-    # # Create images dir if not exist
-    # if not os.path.exists(os.path.join(logdir, "mp_images")):
-    #     os.makedirs(os.path.join(logdir, "mp_images"))
-    # # Save observations as images
-    # for i in range(len(images)):
-    #     image = images[i]
-    #     # make it channel last
-    #     image = np.transpose(image, (1, 2, 0))
-    #     # save image
-    #     image_file_name = "mp_images/image_" + str(i) + ".png"
-    #     image_file_path = os.path.join(logdir, image_file_name)
-    #     plt.imsave(image_file_path, image)
 
     env.close()
 
@@ -255,9 +265,11 @@ if __name__ == "__main__":
     #         ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
     #         ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
 
-    scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.142]],
-            ["cutlery_block_scene.ttt", [-0.03, 0.01, 0.768, 0.351]],
-            ["cutlery_block_scene.ttt", [0.025, -0.045, 0.79, -0.424]]]
+    scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
+            ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]]]
+            
+            # ["cutlery_block_scene.ttt", [-0.03, 0.01, 0.768, 0.351]],
+            # ["cutlery_block_scene.ttt", [0.025, -0.045, 0.79, -0.424]]]
 
     # scenes = [["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
     #         ["wooden_block_scene.ttt", [-0.0253, 0.0413, 0.791, -2.164]],
@@ -265,10 +277,12 @@ if __name__ == "__main__":
 
     # Collect 1M samples for each scene
     num_of_samples = 1000000
-    scene_index = 2
+    scene_index = 1
     run_index = 9
-    task_name = f"cutlery_block_scene_{scene_index}_{num_of_samples}_{run_index}"
+    scene_name = scenes[scene_index][0].split(".")[0]
+    task_name = f"{scene_name}"
     collect_data(scene_file_name=scenes[scene_index][0],
                     bottleneck=scenes[scene_index][1],
                     num_of_samples=num_of_samples,
-                    task_name=task_name)
+                    task_name=task_name,
+                    start_index=num_of_samples*run_index)

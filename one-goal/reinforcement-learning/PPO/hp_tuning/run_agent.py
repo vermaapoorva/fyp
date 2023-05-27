@@ -67,9 +67,9 @@ if __name__ == '__main__':
                 [64, 128, 256],
                 [32, 64, 128, 256]]
 
-    net_arch_indexes = [5]
+    net_arch_indexes = [4]
 
-    scene_indexes = [1]
+    scene_indexes = [4]
     # scene_indexes = [3, 4, 5]
 
     # env = Monitor(gym.make("RobotEnv-v2", file_name=scenes[0][0], bottleneck=scenes[0][1], headless=True, image_size=64, sleep=0), "logs_arch/")

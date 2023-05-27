@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 # from Common import config
 # from Common import graphs
 from network import ImageToPoseNetworkCoarse
+from dataset import ImageToPoseDatasetCoarse
 import os
 import pickle
 
@@ -18,7 +19,8 @@ class ImageToPoseTrainerCoarse:
 
         self.bitbucket = '/vol/bitbucket/av1019/behavioural-cloning/c2f/'
         self.task_name = task_name
-        # self.image_to_pose_dataset = ImageToPoseDatasetCoarse(task_name)
+        self.image_to_pose_dataset = ImageToPoseDatasetCoarse(scene_name=scene_name,
+                                                                amount_of_data=amount_of_data)
         self.image_to_pose_network = ImageToPoseNetworkCoarse(task_name, hyperparameters)
 
         self.minibatch_size = hyperparameters['batch_size']
@@ -26,24 +28,30 @@ class ImageToPoseTrainerCoarse:
         self.loss_orientation_coefficient = 0.01
         # self.loss_orientation_coefficient = hyperparameters['or_coeff']
 
-        # Split obs_data into train and val
-        data_file = f"/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/12000_expert_data_{scene_name}.pkl"
-        with open(data_file, 'rb') as f:
-                data = pickle.loads(f.read())
-        # train_size = int(0.8 * len(data))
-        # val_size = len(data) - train_size
-        train_size = amount_of_data
-        val_size = int(0.2 * train_size)
-        # take the first train_size+val_size examples from the dataset
-        data = Subset(data, range(train_size + val_size))
-        print("Length of data: ", len(data))
-        train_data, val_data = torch.utils.data.random_split(data, [train_size, val_size])
-        print("Length of train data: ", len(train_data))
-        print("Length of val data: ", len(val_data))
+        # Training indicies 90% of data
+        # first_val_index = int(0.9 * amount_of_data)
+        # length_of_data = len(self.image_to_pose_dataset)
+        # self.training_indices = list(range(0, first_val_index))
+        # self.validation_indices = list(range(first_val_index, amount_of_data))
+
+        # Choose a ranom 90% for training and 10% for validation
+        # length_of_data = len(self.image_to_pose_dataset)
+        self.training_indices = np.random.choice(amount_of_data, int(0.9 * amount_of_data), replace=False)
+        self.validation_indices = np.setdiff1d(list(range(amount_of_data)), self.training_indices)
+
+        print("train indicies ", self.training_indices)
+        print("val indicies ", self.validation_indices)
+
+        # print("Length of data: ", length_of_data)
+        print("Length of train data: ", len(self.training_indices))
+        print("Length of val data: ", len(self.validation_indices))
+
+        self.training_sampler = SubsetRandomSampler(indices=self.training_indices)
+        self.validation_sampler = SubsetRandomSampler(indices=self.validation_indices)
 
         # Create the data loaders
-        self.training_loader = DataLoader(train_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
-        self.validation_loader = DataLoader(val_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
+        self.training_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.training_sampler, drop_last=True)
+        self.validation_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.validation_sampler, drop_last=True)
 
         # INITIALISE THE NETWORK
         # Set the GPU
@@ -72,6 +80,7 @@ class ImageToPoseTrainerCoarse:
             # Increment the epoch num
             epoch_num += 1
             # TRAINING
+            print('Training...')
             # Set to training mode
             self.image_to_pose_network.train()
             # Set some variables to store the training results
@@ -79,6 +88,7 @@ class ImageToPoseTrainerCoarse:
             # Loop over minibatches
             num_minibatches = 0
             for minibatch_num, examples in enumerate(self.training_loader):
+                # print(f'minibatch {minibatch_num}/{len(self.training_loader)}')
                 # Do a forward pass on this minibatch
                 minibatch_loss = self._train_on_minibatch(examples, epoch_num)
                 # Update the loss sums
@@ -90,6 +100,7 @@ class ImageToPoseTrainerCoarse:
             training_losses.append(training_loss)
 
             # VALIDATION
+            print('Validating...')
             # Set to validation mode
             self.image_to_pose_network.eval()
             # Set some variables to store the training results
@@ -104,6 +115,7 @@ class ImageToPoseTrainerCoarse:
             # Loop over minibatches
             num_minibatches = 0
             for minibatch_num, examples in enumerate(self.validation_loader):
+                # print(f'minibatch {minibatch_num}/{len(self.validation_loader)}')
                 # Do a forward pass on this minibatch
                 minibatch_loss, minibatch_x_error, minibatch_y_error, minibatch_theta_error, minibatch_poses = self._validate_on_minibatch(examples, epoch_num)
                 # Update the loss sums
