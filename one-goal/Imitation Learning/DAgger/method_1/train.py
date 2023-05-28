@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader, Subset
 from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler, BatchSampler
 import matplotlib.pyplot as plt
 
+from dataset import ImageToPoseDatasetCoarse
+
 # from Common import utils
 # from Common import config
 # from Common import graphs
@@ -14,32 +16,18 @@ import pickle
 
 class ImageToPoseTrainerCoarse:
 
-    def __init__(self, task_name, hyperparameters):
+    def __init__(self, task_name, scene_name, hyperparameters):
 
         self.bitbucket = '/vol/bitbucket/av1019/dagger/hyperparameters/'
         self.task_name = task_name
-        # self.image_to_pose_dataset = ImageToPoseDatasetCoarse(task_name)
+        self.image_to_pose_dataset = ImageToPoseDatasetCoarse(scene_name=scene_name, task_name=task_name)
         self.image_to_pose_network = ImageToPoseNetworkCoarse(task_name, hyperparameters)
 
         self.minibatch_size = hyperparameters['batch_size']
         self.init_learning_rate = hyperparameters['learning_rate']
         self.loss_orientation_coefficient = 0.01
 
-        # create expert data folder if it doesn't exist
-        if not os.path.exists(f"{self.bitbucket}expert_data"):
-            os.makedirs(f"{self.bitbucket}expert_data")
-
-        # Split obs_data into train and val
-        self.data_file = f"{self.bitbucket}expert_data/{task_name}_data.pkl"
-        # with open(self.data_file, 'rb') as f:
-        #         data = pickle.loads(f.read())
-        # train_size = int(0.8 * len(data))
-        # val_size = len(data) - train_size
-        # train_data, val_data = torch.utils.data.random_split(data, [train_size, val_size])
-
-        # # Create the data loaders
-        # self.training_loader = DataLoader(train_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
-        # self.validation_loader = DataLoader(val_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
+        self.update_dataloaders(self.image_to_pose_dataset.__len__())
 
         # INITIALISE THE NETWORK
         # Set the GPU
@@ -59,19 +47,23 @@ class ImageToPoseTrainerCoarse:
     def get_network(self):
         return self.image_to_pose_network
 
-    def update_dataloaders(self, amount_of_data):
-        # Split obs_data into train and val
-        with open(self.data_file, 'rb') as f:
-                data = pickle.loads(f.read())
-        train_size = int(0.8 * amount_of_data)
-        val_size = amount_of_data - train_size
-        train_data, val_data = torch.utils.data.random_split(data, [train_size, val_size])
+    def update_dataloaders(self, iteration):
+        amount_of_data = self.image_to_pose_dataset.update(iteration)
 
-        print(f"Amount of data: {amount_of_data}, train size: {train_size}, val size: {val_size}")
+        print(f"Amount of data: {amount_of_data} after iteration {iteration}")
 
-        # Create new data loaders
-        self.training_loader = DataLoader(train_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
-        self.validation_loader = DataLoader(val_data, batch_size=self.minibatch_size, shuffle=True, drop_last=True)
+        self.training_indices = np.random.choice(amount_of_data, int(0.9 * amount_of_data), replace=False)
+        self.validation_indices = np.setdiff1d(list(range(amount_of_data)), self.training_indices)
+
+        print("Length of training indices:", len(self.training_indices))
+        print("Length of validation indices:", len(self.validation_indices))
+
+        self.training_sampler = SubsetRandomSampler(indices=self.training_indices)
+        self.validation_sampler = SubsetRandomSampler(indices=self.validation_indices)
+
+        # # Create the data loaders
+        self.training_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.training_sampler, drop_last=True)
+        self.validation_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.validation_sampler, drop_last=True)
 
     def train(self):
         print('Training the network...')
@@ -191,7 +183,7 @@ class ImageToPoseTrainerCoarse:
         np.save(self.bitbucket + 'Networks/' + str(self.task_name) + '/network_uncertainty_validation_error.npy', min_validation_error)
 
         # Save checkpoint
-        amount_of_data = len(self.training_loader.dataset)
+        amount_of_data = len(self.image_to_pose_dataset) * 0.9
         checkpoint_path = self.bitbucket + 'Networks/' + str(self.task_name) + '/network_' + str(amount_of_data) + '.torch'
         self.image_to_pose_network.save_checkpoint(checkpoint_path)
         print(f"Saved checkpoint with {amount_of_data} training examples")

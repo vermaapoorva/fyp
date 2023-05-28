@@ -1,13 +1,14 @@
 import numpy as np
 import cv2
 import torch.cuda
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Subset, IterableDataset
 from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler, BatchSampler
 import matplotlib.pyplot as plt
 
-# from Common import utils
-# from Common import config
-# from Common import graphs
+from torchvision import transforms
+import webdataset as wds
+from itertools import islice
+
 from network import ImageToPoseNetworkCoarse
 from dataset import ImageToPoseDatasetCoarse
 import os
@@ -50,8 +51,14 @@ class ImageToPoseTrainerCoarse:
         self.validation_sampler = SubsetRandomSampler(indices=self.validation_indices)
 
         # Create the data loaders
-        self.training_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.training_sampler, drop_last=True)
-        self.validation_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.validation_sampler, drop_last=True)
+        self.training_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.training_sampler, drop_last=True, num_workers=8, pin_memory=True)
+        self.validation_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.validation_sampler, drop_last=True, num_workers=8, pin_memory=True)
+
+        # self.training_loader_iter = iter(self.training_loader)
+        # self.validation_loader_iter = iter(self.validation_loader)
+
+        # self.next_training_minibatch = next(self.training_loader_iter)
+        # self.next_training_minibatch = [_.cuda(non_blocking=True) for _ in self.next_training_minibatch]
 
         # INITIALISE THE NETWORK
         # Set the GPU

@@ -181,10 +181,6 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
 
             env.env_method("set_goal", indices=i, goal_pos=goal_pos, goal_orientation=goal_orientation)
 
-        images = []
-        actions = []
-        heights = []
-
         while not np.all(dones):
             
             active_envs = np.logical_not(dones)
@@ -194,13 +190,21 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
             expert_actions_to_target = expert_policy_to_target(env)
 
             for i in active_envs_indices:
-                image = obss[i]
+                image = np.array(obss[i])
                 action = expert_actions_to_bottleneck[i]
                 endpoint_height = env.env_method("get_agent_position", indices=i)[0][2]
 
-                images.append(image)
-                actions.append(action)
-                heights.append(endpoint_height)     
+                image = np.transpose(image, (1, 2, 0))
+                plt.imsave(f"{logdir}image_{start_index+amount_of_data_collected}.png", image)
+
+                # append endpoint height to action
+                action = np.append(action, endpoint_height)
+                np.save(f"{logdir}image_{start_index+amount_of_data_collected}.npy", action)
+                # np.save(f"{logdir}height_{start_index+amount_of_data_collected}.npy", endpoint_height)
+                amount_of_data_collected += 1
+
+                if amount_of_data_collected >= num_of_samples:
+                    break
 
             # Get expert actions to target with current observation
             active_expert_actions_to_target = [expert_actions_to_target[i] if active_envs[i] else None for i in range(env.num_envs)]
@@ -225,27 +229,44 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
         for i in range(env.num_envs):
             returns[i].append(total_return[i])
 
-        num_of_images_this_trajectory = 0
-        # Save images to img dir with index amount_of_data_collected+start_index
-        with NpyAppendArray(logdir + images_file) as image_file_npy:
-            for i in range(len(images)):
-                image = images[i]
-                image = image.astype(np.float32)
-                image /= 255.0
-                image = np.expand_dims(image, axis=0)
-                image_file_npy.append(image)
-                # print("image shape: ", image.shape)
+        # num_of_images_this_trajectory = 0
+        # print("Shape of images: ", images.shape)
+        # # Save images to img dir with index amount_of_data_collected+start_index
+        # with NpyAppendArray(logdir + images_file) as image_file_npy:
+        #     for i in range(len(images)):
+        #         image = images[i]
+        #         image = image.astype(np.float32)
+        #         if np.max(image) > 255 or np.min(image) < 0:
+        #             print("ERROR IN MIN MAX!!!!")
+        #             print("min: ", np.min(image))
+        #             print("max: ", np.max(image))
+        #         image /= 255.0
+        #         if np.max(image) > 1 or np.min(image) < 0:
+        #             print("ERROR IN MIN MAX AFTER DIVIDING!!!!")
+        #             print("min: ", np.min(image))
+        #             print("max: ", np.max(image))
+        #         print("image shape before: ", image.shape)
+        #         image = np.transpose(image, (1, 2, 0))
+        #         # image = np.expand_dims(image, axis=0)
+        #         if np.max(image) > 1 or np.min(image) < 0:
+        #             print("ERROR IN MIN MAX AFTER TRANSPOSING!!!!")
+        #             print("min: ", np.min(image))
+        #             print("max: ", np.max(image))
+        #         image_file_npy.append(image)
+        #         print("image file shape: ", image_file_npy.shape)
+        #         # if np.max(image_file_npy) > 1 or np.min(image_file_npy) < 0:
+        #         #     print("ERROR IN MIN MAX AFTER APPENDING!!!!")
 
-                amount_of_data_collected += 1
-                num_of_images_this_trajectory += 1
-                if amount_of_data_collected >= num_of_samples:
-                    break
+        #         amount_of_data_collected += 1
+        #         num_of_images_this_trajectory += 1
+        #         if amount_of_data_collected >= num_of_samples:
+        #             break
         
-        # Append actions and heights to file
-        with NpyAppendArray(logdir + actions_file) as action_file_npy:
-            action_file_npy.append(np.array(actions[:num_of_images_this_trajectory]))
-        with NpyAppendArray(logdir + heights_file) as heights_file_npy:
-            heights_file_npy.append(np.array(heights[:num_of_images_this_trajectory]))
+        # # Append actions and heights to file
+        # with NpyAppendArray(logdir + actions_file) as action_file_npy:
+        #     action_file_npy.append(np.array(actions[:num_of_images_this_trajectory]))
+        # with NpyAppendArray(logdir + heights_file) as heights_file_npy:
+        #     heights_file_npy.append(np.array(heights[:num_of_images_this_trajectory]))
 
         print(f"{amount_of_data_collected}/{num_of_samples} --- {(amount_of_data_collected/num_of_samples)*100}%")
 
@@ -266,8 +287,10 @@ if __name__ == "__main__":
     #         ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
 
     scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
-            ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]]]
-            
+            ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
+            ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
+            ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
+
             # ["cutlery_block_scene.ttt", [-0.03, 0.01, 0.768, 0.351]],
             # ["cutlery_block_scene.ttt", [0.025, -0.045, 0.79, -0.424]]]
 
@@ -277,8 +300,8 @@ if __name__ == "__main__":
 
     # Collect 1M samples for each scene
     num_of_samples = 1000000
-    scene_index = 1
-    run_index = 9
+    scene_index = 0
+    run_index = 0
     scene_name = scenes[scene_index][0].split(".")[0]
     task_name = f"{scene_name}"
     collect_data(scene_file_name=scenes[scene_index][0],
