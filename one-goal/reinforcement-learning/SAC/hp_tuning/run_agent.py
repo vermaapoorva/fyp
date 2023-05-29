@@ -1,151 +1,99 @@
-import gymnasium as gym
-from gymnasium import spaces
-from stable_baselines3 import PPO, SAC
-from stable_baselines3.common.evaluation import evaluate_policy
+from sac import train, run_model, get_number_of_parameters
 import os
-import cv2
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-
-import robot_env
-from zipfile import ZipFile
-import pickle
-
-import numpy as np
-from PIL import Image
-from os.path import dirname, join, abspath
-
-from pyrep import PyRep
-from pyrep.objects import VisionSensor, Object, Camera
-
-import time
-import matplotlib.pyplot as plt
-import torch as th
-import torch.nn as nn
-
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.common import results_plotter
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
-from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, StopTrainingOnRewardThreshold
-from stable_baselines3.common.logger import TensorBoardOutputFormat
+import gymnasium as gym
 
-from stable_baselines3 import PPO
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+if __name__ == '__main__':
 
-def get_number_of_parameters(net_arch, env):
-    # Load the model from the zip file
-    # model = SAC.load(model_file_path)
+    tuning_seed = 20
 
-    # Create CNN SAC model with net_arch policy+vf:
+    # hyperparameters = [{"net_arch": [32, 48, 64, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+    #                     {"net_arch": [32, 48, 64, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+    #                     {"net_arch": [32, 48, 64, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
+    #                     {"net_arch": [32, 64, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+    #                     {"net_arch": [32, 64, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+    #                     {"net_arch": [32, 64, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
+    #                     {"net_arch": [32, 64, 64, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+    #                     {"net_arch": [32, 64, 64, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+    #                     {"net_arch": [32, 64, 64, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
+    #                     {"net_arch": [64, 128, 64], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+    #                     {"net_arch": [64, 128, 64], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+    #                     {"net_arch": [64, 128, 64], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
+    #                     {"net_arch": [128, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+    #                     {"net_arch": [128, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+    #                     {"net_arch": [128, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
+    #                     {"net_arch": [128, 128, 128], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+    #                     {"net_arch": [128, 128, 128], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+    #                     {"net_arch": [128, 128, 128], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
+    #                     {"net_arch": [64, 128, 256], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+    #                     {"net_arch": [64, 128, 256], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+    #                     {"net_arch": [64, 128, 256], "batch_size": 8192, "n_steps": 4096}, # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
+    #                     {"net_arch": [32, 64, 128, 256], "batch_size": 4096, "n_steps": 2048}, # rollout buffer size: 2048*16 = 32768, updates: 32768/4096 = 8
+    #                     {"net_arch": [32, 64, 128, 256], "batch_size": 8192, "n_steps": 2048}, # rollout buffer size: 2048*16*2 = 65536, updates: 65536/8192 = 8
+    #                     {"net_arch": [32, 64, 128, 256], "batch_size": 8192, "n_steps": 4096}] # rollout buffer size: 4096*16*2 = 131072, updates: 131072/8192 = 16
 
-    model = SAC('CnnPolicy', env, verbose=1, policy_kwargs=dict(net_arch=dict(pi=net_arch, qf=net_arch)))
+    # [32, 64, 128] --- 628616 params
+    # [32, 64, 64, 128] --- 632776 params
+    # [128, 128] --- 683944 params
+    # [64, 128, 256] --- 676968 params
+    # [32, 64, 128, 256] --- 662664 params
+    # [32, 64, 32] --- 621608 params
+    # [64, 128, 64] --- 650664 params
 
-    num_of_params = 0
-    policy_dict = model.get_parameters().get("policy")
-    for key, value in policy_dict.items():
-        
-        # Add numel if key contains pi_features_extractor, mlp_extractor.policy_net, action_net
-        if "pi_features_extractor" in key or "mlp_extractor.policy_net" in key or "action_net" in key:
-            num_of_params += value.numel()
-        
-    print("Number of parameters: ", num_of_params)
-    return num_of_params
+    scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
+                ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
+                ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
+                ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
+                ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
+                ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
 
-def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
+    # If PPO directory doesn't exist, create it
+    if not os.path.exists("/vol/bitbucket/av1019/SAC"):
+        os.makedirs("/vol/bitbucket/av1019/SAC")
 
-    print("Training on scene: " + scene_file_name)
-    print("Bottleneck x: " + str(bottleneck[0]))
-    print("Bottleneck y: " + str(bottleneck[1]))
-    print("Bottleneck z: " + str(bottleneck[2]))
-    print("Bottleneck z angle: " + str(bottleneck[3]))
-    print("Hyperparameters: " + str(hyperparameters))
+    # If hyperparameters directory doesn't exist, create it
+    if not os.path.exists("/vol/bitbucket/av1019/SAC/hyperparameters"):
+        os.makedirs("/vol/bitbucket/av1019/SAC/hyperparameters")
 
-    logdir = f"/vol/bitbucket/av1019/SAC/logs/{task_name}/"
-    tensorboard_log_dir = f"/vol/bitbucket/av1019/SAC/tensorboard_logs/{task_name}/"
+    # If values directory doesn't exist, create it
+    if not os.path.exists("/vol/bitbucket/av1019/SAC/hyperparameters/values"):
+        os.makedirs("/vol/bitbucket/av1019/SAC/hyperparameters/values")
 
-    env = make_vec_env("RobotEnv-v2",
-                        n_envs=16,
-                        vec_env_cls=SubprocVecEnv,
-                        env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
-    
-    eval_env = make_vec_env("RobotEnv-v2",
-                        n_envs=1,
-                        vec_env_cls=SubprocVecEnv,
-                        env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
+    net_archs = [[32, 64, 64, 128],
+                [128, 128],
+                [32, 64, 128, 256],
+                [32, 64, 32],
+                [64, 128, 64]]
 
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
+    net_arch_indexes = [3]
 
-    if not os.path.exists(tensorboard_log_dir):
-        os.makedirs(tensorboard_log_dir)
+    scene_indexes = [5]
+    # scene_indexes = [4, 5]
 
-    net_arch = hyperparameters["net_arch"]
-    batch_size = hyperparameters["batch_size"]
-    n_steps = hyperparameters["n_steps"]
+    # env = Monitor(gym.make("RobotEnv-v2", file_name=scenes[0][0], bottleneck=scenes[0][1], headless=True, image_size=64, sleep=0), "logs_arch/")
 
-    policy_kwargs = dict(
-        net_arch=dict(pi=net_arch, qf=net_arch)
-    )
+    # for net_arch in net_archs:
+    #     params = get_number_of_parameters(net_arch, env)
+    #     print(f"Net arch: {net_arch}, params: {params}")
 
-    model = SAC('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    for i in net_arch_indexes:
+        for scene_num in scene_indexes:
+            task_name = f"net_arch_{i}_scene_{scene_num}"
+            scene_file_name, bottleneck = scenes[scene_num]
+            # Save the hyperparameters, scene name and bottleneck to a file, create it if it doesn't exist
+            with open(f"/vol/bitbucket/av1019/SAC/hyperparameters/values/{task_name}.txt", "w+") as f:
+                f.write(f"Scene: {scene_file_name}\n")
+                f.write(f"Bottleneck: {bottleneck}\n")
+                f.write(f"Net arch: {net_archs[i]}\n")
+                f.write(f"Buffer size: 100000\n")
 
-    # Create the callbacks
-    eval_callback = EvalCallback(eval_env,
-                                    best_model_save_path=logdir,
-                                    log_path=logdir,
-                                    eval_freq=20000,
-                                    # callback_on_new_best=callback_on_best,
-                                    deterministic=True,
-                                    verbose=1)
+            # Train the model
+            print(f"Training model {i} on scene {scene_num} with net_arch {net_archs[i]}")
+            # scene_file_name, bottleneck, seed, hyperparameters, hyperparam_i, scene_num
+            train(scene_file_name=scene_file_name,
+                        bottleneck=bottleneck,
+                        seed=tuning_seed,
+                        hyperparameters={"net_arch": net_archs[i], "buffer_size": 100000},
+                        task_name=task_name)
 
-    # Train the agent for 7.5M timesteps
-    timesteps = 7000000
-    model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
-    model.save(f"{logdir}/final_model.zip")
-
-def run_model(hyperparam_i, scene_num):
-
-    logdir = f"/vol/bitbucket/av1019/PPO/logs/hp_{hyperparam_i}_scene_{scene_num}/"
-
-    env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0), logdir)
-
-    model_path = f"{logdir}/best_model.zip"
-    model = PPO.load(model_path, env=env)
-
-    total_episodes = 0
-    successful_episodes = 0
-    distances_to_goal = []
-    orientation_differences_z = []
-    while total_episodes < 100:
-        obs, _ = env.reset()
-        done = False
-        episode_rewards = []
-        total_episodes += 1
-
-        while not done:
-            # pass observation to model to get predicted action
-            action, _states = model.predict(obs)
-
-            # pass action to env and get info back
-            obs, reward, done, truncated, info = env.step(action)
-            episode_rewards.append(reward)
-
-            # show the environment on the screen
-            env.render()
-
-        distance_to_goal = env.get_distance_to_goal()
-        orientation_difference_z = env.get_orientation_diff_z()
-
-        if not truncated:
-            successful_episodes += 1
-            print(f"Episode {total_episodes} successful! Distance to goal: {distance_to_goal}. Orientation difference z: {orientation_difference_z}")
-        
-        distances_to_goal.append(distance_to_goal)
-        orientation_differences_z.append(orientation_difference_z)
-
-    print(f"Number of successful episodes: {successful_episodes}")
-    print(f"Number of total episodes: {total_episodes}")
-    print(f"Distance Accuracy = Average distance to goal: {np.mean(distances_to_goal)}")
-    print(f"Orientation Accuracy = Average orientation difference z: {np.mean(orientation_differences_z)}")
-    print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
+    # run_model()

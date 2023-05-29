@@ -60,7 +60,7 @@ class RobotEnv(gym.Env):
         self.action_space = spaces.Box(low=np.array([-1, -1, -1, -np.pi/4]),
                                        high=np.array([1, 1, 1, np.pi/4]),
                                        shape=(4,),
-                                       dtype=np.float64)
+                                       dtype=np.float32)
         self.observation_space = spaces.Box(low=0, high=255,
                                             shape=(3, self.image_size, self.image_size), dtype=np.uint8)
         

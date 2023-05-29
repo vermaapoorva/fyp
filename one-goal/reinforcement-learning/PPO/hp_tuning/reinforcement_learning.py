@@ -88,9 +88,9 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
         net_arch=dict(pi=net_arch, vf=net_arch)
     )
 
-    model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    # model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
-    # model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
+    model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     eval_callback = EvalCallback(eval_env,
@@ -103,8 +103,8 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
 
     # Train the agent for 7.5M timesteps
     timesteps = 7000000
-    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
-    model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
+    model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
+    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
     model.save(f"{logdir}/final_model.zip")
 
 def run_model(hyperparam_i, scene_num):

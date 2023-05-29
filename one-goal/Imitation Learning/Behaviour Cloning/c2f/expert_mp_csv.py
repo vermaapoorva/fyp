@@ -121,12 +121,6 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
                         vec_env_cls=SubprocVecEnv,
                         env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
-    # scene_file_name = scene_file_name[:-4]
-    # output_file = task_name + ".pkl"
-    actions_file = f"{task_name}_{start_index}_actions.npy"
-    heights_file = f"{task_name}_{start_index}_heights.npy"
-    images_file = f"{task_name}_{start_index}_images.npy"
-
     returns = [[] for _ in range(env.num_envs)]
     amount_of_data_collected = 0
     distances_to_goal = []
@@ -138,24 +132,6 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
     data = []
     amount_of_actions_collected = 0
     amount_of_heights_collected = 0
-
-    # Get amount of data in npy file if they exist
-    if os.path.exists(logdir + actions_file):
-        saved_actions = np.load(logdir + actions_file)
-        amount_of_actions_collected = len(saved_actions)
-    
-    if os.path.exists(logdir + heights_file):
-        saved_heights = np.load(logdir + heights_file)
-        amount_of_heights_collected = len(saved_heights)
-
-    if amount_of_actions_collected != amount_of_heights_collected:
-        print("Amount of actions and heights collected are not equal!")
-        print("Amount of actions collected: ", amount_of_actions_collected)
-        print("Amount of heights collected: ", amount_of_heights_collected)
-        return
-
-    amount_of_data_collected = amount_of_actions_collected
-    print("amount of data already collected: ", amount_of_data_collected)
 
     while amount_of_data_collected < num_of_samples:
 
@@ -200,7 +176,6 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
                 # append endpoint height to action
                 action = np.append(action, endpoint_height)
                 np.save(f"{logdir}image_{start_index+amount_of_data_collected}.npy", action)
-                # np.save(f"{logdir}height_{start_index+amount_of_data_collected}.npy", endpoint_height)
                 amount_of_data_collected += 1
 
                 if amount_of_data_collected >= num_of_samples:
@@ -228,45 +203,6 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
         # Append returns
         for i in range(env.num_envs):
             returns[i].append(total_return[i])
-
-        # num_of_images_this_trajectory = 0
-        # print("Shape of images: ", images.shape)
-        # # Save images to img dir with index amount_of_data_collected+start_index
-        # with NpyAppendArray(logdir + images_file) as image_file_npy:
-        #     for i in range(len(images)):
-        #         image = images[i]
-        #         image = image.astype(np.float32)
-        #         if np.max(image) > 255 or np.min(image) < 0:
-        #             print("ERROR IN MIN MAX!!!!")
-        #             print("min: ", np.min(image))
-        #             print("max: ", np.max(image))
-        #         image /= 255.0
-        #         if np.max(image) > 1 or np.min(image) < 0:
-        #             print("ERROR IN MIN MAX AFTER DIVIDING!!!!")
-        #             print("min: ", np.min(image))
-        #             print("max: ", np.max(image))
-        #         print("image shape before: ", image.shape)
-        #         image = np.transpose(image, (1, 2, 0))
-        #         # image = np.expand_dims(image, axis=0)
-        #         if np.max(image) > 1 or np.min(image) < 0:
-        #             print("ERROR IN MIN MAX AFTER TRANSPOSING!!!!")
-        #             print("min: ", np.min(image))
-        #             print("max: ", np.max(image))
-        #         image_file_npy.append(image)
-        #         print("image file shape: ", image_file_npy.shape)
-        #         # if np.max(image_file_npy) > 1 or np.min(image_file_npy) < 0:
-        #         #     print("ERROR IN MIN MAX AFTER APPENDING!!!!")
-
-        #         amount_of_data_collected += 1
-        #         num_of_images_this_trajectory += 1
-        #         if amount_of_data_collected >= num_of_samples:
-        #             break
-        
-        # # Append actions and heights to file
-        # with NpyAppendArray(logdir + actions_file) as action_file_npy:
-        #     action_file_npy.append(np.array(actions[:num_of_images_this_trajectory]))
-        # with NpyAppendArray(logdir + heights_file) as heights_file_npy:
-        #     heights_file_npy.append(np.array(heights[:num_of_images_this_trajectory]))
 
         print(f"{amount_of_data_collected}/{num_of_samples} --- {(amount_of_data_collected/num_of_samples)*100}%")
 
@@ -299,6 +235,7 @@ if __name__ == "__main__":
     #         ["wooden_block_scene.ttt", [0.0321, 0.0123, 0.782, -0.262]]]
 
     # Collect 1M samples for each scene
+    # num_of_samples = 1000000
     num_of_samples = 1000000
     scene_index = 0
     run_index = 0

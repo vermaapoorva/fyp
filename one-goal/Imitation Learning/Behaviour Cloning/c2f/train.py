@@ -20,45 +20,22 @@ class ImageToPoseTrainerCoarse:
 
         self.bitbucket = '/vol/bitbucket/av1019/behavioural-cloning/c2f/'
         self.task_name = task_name
-        self.image_to_pose_dataset = ImageToPoseDatasetCoarse(scene_name=scene_name,
-                                                                amount_of_data=amount_of_data)
+        # self.image_to_pose_dataset = ImageToPoseDatasetCoarse(scene_name=scene_name,
+                                                                # amount_of_data=amount_of_data)
         self.image_to_pose_network = ImageToPoseNetworkCoarse(task_name, hyperparameters)
+
+        self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_shards-{{000000..000008}}.tar'
+        self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_shards-{{000009..000009}}.tar'
 
         self.minibatch_size = hyperparameters['batch_size']
         self.init_learning_rate = hyperparameters['learning_rate']
         self.loss_orientation_coefficient = 0.01
-        # self.loss_orientation_coefficient = hyperparameters['or_coeff']
 
-        # Training indicies 90% of data
-        # first_val_index = int(0.9 * amount_of_data)
-        # length_of_data = len(self.image_to_pose_dataset)
-        # self.training_indices = list(range(0, first_val_index))
-        # self.validation_indices = list(range(first_val_index, amount_of_data))
+        self.image_to_pose_training_dataset = wds.WebDataset(self.training_dataset_directory).decode("torchrgb").to_tuple("png", "npy")
+        self.image_to_pose_validation_dataset = wds.WebDataset(self.validation_dataset_directory).decode("torchrgb").to_tuple("png", "npy")
 
-        # Choose a ranom 90% for training and 10% for validation
-        # length_of_data = len(self.image_to_pose_dataset)
-        self.training_indices = np.random.choice(amount_of_data, int(0.9 * amount_of_data), replace=False)
-        self.validation_indices = np.setdiff1d(list(range(amount_of_data)), self.training_indices)
-
-        print("train indicies ", self.training_indices)
-        print("val indicies ", self.validation_indices)
-
-        # print("Length of data: ", length_of_data)
-        print("Length of train data: ", len(self.training_indices))
-        print("Length of val data: ", len(self.validation_indices))
-
-        self.training_sampler = SubsetRandomSampler(indices=self.training_indices)
-        self.validation_sampler = SubsetRandomSampler(indices=self.validation_indices)
-
-        # Create the data loaders
-        self.training_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.training_sampler, drop_last=True, num_workers=8, pin_memory=True)
-        self.validation_loader = DataLoader(self.image_to_pose_dataset, batch_size=self.minibatch_size, sampler=self.validation_sampler, drop_last=True, num_workers=8, pin_memory=True)
-
-        # self.training_loader_iter = iter(self.training_loader)
-        # self.validation_loader_iter = iter(self.validation_loader)
-
-        # self.next_training_minibatch = next(self.training_loader_iter)
-        # self.next_training_minibatch = [_.cuda(non_blocking=True) for _ in self.next_training_minibatch]
+        self.training_loader = wds.WebLoader(self.image_to_pose_training_dataset.batched(self.minibatch_size), batch_size=None, shuffle=False, num_workers=8)
+        self.validation_loader = wds.WebLoader(self.image_to_pose_validation_dataset.batched(self.minibatch_size), batch_size=None, shuffle=False, num_workers=8)
 
         # INITIALISE THE NETWORK
         # Set the GPU
@@ -94,7 +71,9 @@ class ImageToPoseTrainerCoarse:
             training_epoch_loss_sum = 0
             # Loop over minibatches
             num_minibatches = 0
-            for minibatch_num, examples in enumerate(self.training_loader):
+            # for minibatch_num, examples in enumerate(self.training_loader):
+            # for minibatch_num, examples in enumerate(islice(self.training_loader, self.minibatch_size)):
+            for examples in self.training_loader:
                 # print(f'minibatch {minibatch_num}/{len(self.training_loader)}')
                 # Do a forward pass on this minibatch
                 minibatch_loss = self._train_on_minibatch(examples, epoch_num)
@@ -121,7 +100,7 @@ class ImageToPoseTrainerCoarse:
                 bins = np.linspace(-0.04, 0.05, 10)  # The bin numbers represent the value on the right of the bin (i.e. the maximum value in that bin)
             # Loop over minibatches
             num_minibatches = 0
-            for minibatch_num, examples in enumerate(self.validation_loader):
+            for examples in self.validation_loader:
                 # print(f'minibatch {minibatch_num}/{len(self.validation_loader)}')
                 # Do a forward pass on this minibatch
                 minibatch_loss, minibatch_x_error, minibatch_y_error, minibatch_theta_error, minibatch_poses = self._validate_on_minibatch(examples, epoch_num)
@@ -198,13 +177,15 @@ class ImageToPoseTrainerCoarse:
 
     def _train_on_minibatch(self, examples, epoch_num):
         # Do a forward pass
-        image_tensor = examples['image']
+        image_tensor = examples[0]
 
         # Create the z tensor, which needs to go from one dimension to two dimensions (batch dim, feature dim) in order for it to later be concatenated with the feature
-        endpoint_height_tensor = torch.unsqueeze(examples['endpoint_height'], 1)
-        predictions = self.image_to_pose_network.forward(image_tensor.cuda(), endpoint_height_tensor.cuda())
+        endpoint_heights = examples[1][:, -1].reshape(-1, 1).to(dtype=torch.float32)
+
+        predictions = self.image_to_pose_network.forward(image_tensor.cuda(), endpoint_heights.cuda())
         # Compute the loss
-        ground_truths = examples['action'].cuda()
+        ground_truths = examples[1][:, :-1].reshape(-1, 4).to(dtype=torch.float32).cuda()
+
         loss = self._compute_loss(predictions, ground_truths)
         # Set the gradients to zero
         self.optimiser.zero_grad()
@@ -219,18 +200,19 @@ class ImageToPoseTrainerCoarse:
 
     def _validate_on_minibatch(self, examples, epoch_num):
         # Do a forward pass
-        image_tensor = examples['image']
+        image_tensor = examples[0]
         # Create the z tensor, which needs to go from one dimension to two dimensions (batch dim, feature dim) in order for it to later be concatenated with the feature
-        endpoint_height_tensor = torch.unsqueeze(examples['endpoint_height'], 1)
-        predictions = self.image_to_pose_network.forward(image_tensor.cuda(), endpoint_height_tensor.cuda())
+        endpoint_heights = examples[1][:, -1].reshape(-1, 1).to(dtype=torch.float32)
+        predictions = self.image_to_pose_network.forward(image_tensor.cuda(), endpoint_heights.cuda())
         # Compute the loss
-        ground_truths = examples['action'].cuda()
+        ground_truths = examples[1][:, :-1].reshape(-1, 4).to(dtype=torch.float32).cuda()
         # Note that you need to call item() in the below, otherwise the loss will never be freed from cuda memory
         minibatch_loss = self._compute_loss(predictions, ground_truths).item()
         # Calculate the error
         minibatch_x_error, minibatch_y_error, minibatch_theta_error = self._compute_errors(predictions.detach().cpu().numpy(), ground_truths.detach().cpu().numpy())
         # Get the x, y, z positions, so that we can plot the validation error at each position
-        minibatch_poses = examples['action'].numpy()
+        minibatch_poses = examples[1][:, :-1].reshape(-1, 4).numpy()
+        # minibatch_poses = examples['action'].numpy()
         return minibatch_loss, minibatch_x_error, minibatch_y_error, minibatch_theta_error, minibatch_poses
 
     def _compute_loss(self, predictions, ground_truths):

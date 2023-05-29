@@ -8,7 +8,7 @@ import numpy as np
 import os
 import pickle
 import torch
-from npy_append_array import NpyAppendArray
+import matplotlib.pyplot as plt
 
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -19,20 +19,27 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
     amount_of_training_data = hyperparameters["amount_of_data"]
     num_dagger_iterations = hyperparameters["num_dagger_iterations"]
 
-    # 20% validation data, 80% training data
-    total_amount_of_data = int(amount_of_training_data * 1.25)
+    # 10% validation data, 90% training data
+    val_split = 0.1
+    total_amount_of_data = int(amount_of_training_data * 10/9)
     amount_of_data_per_iteration = int(total_amount_of_data // num_dagger_iterations)
 
-    print("Amount of training data:", amount_of_training_data)
+    print("Total Amount of training data:", amount_of_training_data)
     print("Total amount of data:", total_amount_of_data)
     print("Amount of data per iteration:", amount_of_data_per_iteration)
 
     print(f"Hyperparameters: {hyperparameters}")
 
+    amount_of_training_data_per_iteration = int(amount_of_training_data // num_dagger_iterations)
+    amount_of_validation_data_per_iteration = amount_of_data_per_iteration - amount_of_training_data_per_iteration
+
+    print("Amount of training data per iteration:", amount_of_training_data_per_iteration)
+    print("Amount of validation data per iteration:", amount_of_validation_data_per_iteration)
+
     ##### Create environment #####
     # env = gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck)
     env = make_vec_env("RobotEnv-v2",
-                        n_envs=16,
+                        n_envs=1,
                         vec_env_cls=SubprocVecEnv,
                         env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
@@ -44,14 +51,17 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
         ##### Load the trainer #####
 
         image_to_pose_trainer = ImageToPoseTrainerCoarse(task_name=task_name, scene_name=scene_file_name[:-4] ,hyperparameters=hyperparameters)
-        action_file = image_to_pose_trainer.image_to_pose_dataset.action_file
-        height_file = image_to_pose_trainer.image_to_pose_dataset.height_file
-        image_file = get_attr(image_to_pose_trainer.image_to_pose_dataset, f"image{i}_file")
-        print("Image file:", image_file)
+        dataset_directory = image_to_pose_trainer.dataset_directory
+        raw_dataset_directory = dataset_directory + f"raw_data_{i}/"        
+        raw_training_data_directory = raw_dataset_directory + "training_data/"
+        raw_validation_data_directory = raw_dataset_directory + "validation_data/"
 
-        print("Action file:", action_file)
-        print("Height file:", height_file)
-        print("Image file:", image_file)
+        if not os.path.exists(raw_dataset_directory):
+            os.makedirs(raw_dataset_directory)
+        if not os.path.exists(raw_training_data_directory):
+            os.makedirs(raw_training_data_directory)
+        if not os.path.exists(raw_validation_data_directory):
+            os.makedirs(raw_validation_data_directory)
 
         ##### Load the model #####
 
@@ -67,23 +77,33 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
 
         ##### Collect data from the expert #####
 
+        print(f"Collecting training data for iteration {i}...")
+
         collect_expert_data(env=env,
                             network=image_to_pose_network,
-                            amount_of_data_per_iteration=amount_of_data_per_iteration,
-                            action_file=action_file,
-                            height_file=height_file,
-                            image_file=image_file,
+                            amount_of_data=amount_of_training_data_per_iteration,
+                            raw_dataset_directory=raw_training_data_directory,
+                            iteration=i)
+
+        print(f"Collecting validation data for iteration {i}...")
+
+        collect_expert_data(env=env,
+                            network=image_to_pose_network,
+                            amount_of_data=amount_of_validation_data_per_iteration,
+                            raw_dataset_directory=raw_validation_data_directory,
                             iteration=i)
 
         ##### Update model with new expert data #####
 
-        image_to_pose_trainer.update_dataloaders(amount_of_data_per_iteration * (i+1), iteration=i)
+        image_to_pose_trainer.update_dataloaders(iteration=i,
+                                                amount_of_training_data=amount_of_training_data_per_iteration,
+                                                amount_of_validation_data=amount_of_validation_data_per_iteration)
 
         ##### Train the model #####
 
         image_to_pose_trainer.train()
 
-def collect_expert_data(env, network, amount_of_data_per_iteration, action_file, height_file, image_file, iteration):
+def collect_expert_data(env, network, amount_of_data, raw_dataset_directory, iteration):
 
     amount_of_data_collected = 0
 
@@ -91,7 +111,7 @@ def collect_expert_data(env, network, amount_of_data_per_iteration, action_file,
     distances_to_goal = []
     orientation_diffs_z = []
 
-    while amount_of_data_collected < amount_of_data_per_iteration:
+    while amount_of_data_collected < amount_of_data:
 
         obss = env.reset()
         dones = np.zeros((env.num_envs,), dtype=bool)
@@ -107,17 +127,25 @@ def collect_expert_data(env, network, amount_of_data_per_iteration, action_file,
             active_envs = np.logical_not(dones)
             active_envs_indices = [i for i in range(env.num_envs) if active_envs[i]]
 
-            # print("Active envs:", active_envs_indices)
-
             expert_actions = expert_policy(env)
 
             for i in active_envs_indices:
-                image = obss[i]
+                image = np.array(obss[i])
+                action = expert_actions[i]
                 endpoint_height = env.env_method("get_agent_position", indices=i)[0][2]
 
-                images.append(image)
-                actions.append(expert_actions[i])
-                heights.append(endpoint_height)
+                image = np.transpose(image, (1, 2, 0))
+                plt.imsave(f"{raw_dataset_directory}image_{amount_of_data_collected}.png", image)
+
+                action = np.append(action, endpoint_height)
+                np.save(f"{raw_dataset_directory}image_{amount_of_data_collected}.npy", action)
+                amount_of_data_collected += 1
+
+                if amount_of_data_collected >= amount_of_data:
+                    break
+
+            if amount_of_data_collected >= amount_of_data:
+                break
 
             predicted_actions = []
 
@@ -152,25 +180,7 @@ def collect_expert_data(env, network, amount_of_data_per_iteration, action_file,
         for i in range(env.num_envs):
             returns[i].append(total_return[i])
 
-        num_of_images_this_trajectory = 0
-        with NpyAppendArray(image_file) as image_array_npy:
-            for image in images:
-                image = image.astype(np.float32)
-                image /= 255.0
-                image = np.expand_dims(image, axis=0)
-                image_array_npy.append(image)
-
-                amount_of_data_collected += 1
-                num_of_images_this_trajectory += 1
-                if amount_of_data_collected >= amount_of_data_per_iteration:
-                    break
-        
-        with NpyAppendArray(action_file) as action_file_npy:
-            action_file_npy.append(np.array(actions[:num_of_images_this_trajectory]))
-        with NpyAppendArray(height_file) as height_file_npy:
-            height_file_npy.append(np.array(heights[:num_of_images_this_trajectory]))
-
-        print(f"{amount_of_data_collected}/{amount_of_data_per_iteration} --- {(amount_of_data_collected / amount_of_data_per_iteration) * 100}%")
+        print(f"{amount_of_data_collected}/{amount_of_data} --- {(amount_of_data_collected / amount_of_data) * 100}%")
 
     print(f"Collected {amount_of_data_collected} new data points.")
     print("Mean return:", np.mean(returns))

@@ -58,23 +58,23 @@ if __name__ == "__main__":
                         {"net_arch": [64, 128, 64], "learning_rate": 0.0001, "batch_size": 64},
                         {"net_arch": [64, 128, 64], "learning_rate": 0.00001, "batch_size": 64}]
 
-    # final_hyperparameters = {"net_arch": [32, 64, 128, 256],
-    #                             "learning_rate": 0.001,
-    #                             "batch_size": 64,
-    #                             "amount_of_data": 10000000,
-    #                             "num_dagger_iterations": 100}
+    final_hyperparameters = {"net_arch": [32, 64, 128, 256],
+                                "learning_rate": 0.001,
+                                "batch_size": 64,
+                                "amount_of_data": 10000,
+                                "num_dagger_iterations": 10}
 
     # scene_index = 0
 
-    results = []
+    for i in range(24, 36):
 
-    for i in range(0, 12):
+        results = []
 
         hyperparameter = hyperparameters[i]
         hyperparameter["num_dagger_iterations"] = 10
         hyperparameter["amount_of_data"] = 10000
-        
-        # hyperparameter = final_hyperparameters
+
+        hyperparameter = final_hyperparameters
 
         for scene_index, scene in enumerate(scenes):
 
@@ -82,6 +82,8 @@ if __name__ == "__main__":
 
             scene_file_name = scenes[scene_index][0]
             scene_name = scene_file_name.split(".")[0]
+
+            # name_of_task = f"try_webdataset_10k_10_val_1_env_10_iters"
 
             name_of_task = f"final_tuning_scene_{scene_index}_hp_{i}"
 
@@ -112,5 +114,5 @@ if __name__ == "__main__":
             print(results)
 
             # Save results
-            with open(f"/vol/bitbucket/av1019/behavioural-cloning/c2f/final_tuning_hp_{i}.json", "w") as f:
+            with open(f"/vol/bitbucket/av1019/dagger/hyperparameters/final_tuning_hp_{i}.json", "w") as f:
                 json.dump(results, f, indent=4)

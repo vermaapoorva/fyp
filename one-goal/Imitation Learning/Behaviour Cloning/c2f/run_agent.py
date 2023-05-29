@@ -14,17 +14,17 @@ scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
         ["bowl_scene.ttt", [-0.074, -0.023, 0.7745, -2.915]],
         ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
 
-final_hyperparameters = {"net_arch": [32, 64, 128, 256], "learning_rate": 0.001, "batch_size": 4096}
-for scene_name, scene_bottleneck in scenes[0:1]:
+final_hyperparameters = {"net_arch": [32, 64, 128, 256], "learning_rate": 0.001, "batch_size": 64}
+for scene_name, scene_bottleneck in scenes[1:2]:
 
     print(f"Training on scene: {scene_name}, bottleneck: {scene_bottleneck}")
 
     # file name without .ttt
     scene_file_name = scene_name[:-4]
     
-    amount_of_data = 50000
+    amount_of_data = 10000
 
-    name_of_task = f"final_50k_batch_4096_{scene_file_name}"
+    name_of_task = f"try2_4_workers_final_hp_wooden_block_10k_10_shards_1000_each_{scene_file_name}"
 
     trainer = ImageToPoseTrainerCoarse(task_name=name_of_task,
                                         hyperparameters=final_hyperparameters,
@@ -39,7 +39,7 @@ for scene_name, scene_bottleneck in scenes[0:1]:
                                                     scene_name=scene_name,
                                                     bottleneck=scene_bottleneck,
                                                     hyperparameters=final_hyperparameters,
-                                                    num_of_runs=50)
+                                                    num_of_runs=20)
 
     results.append({"scene_name": scene_file_name,
                     "scene_bottleneck": scene_bottleneck,

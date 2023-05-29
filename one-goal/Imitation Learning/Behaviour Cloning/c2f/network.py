@@ -135,6 +135,7 @@ class ImageToPoseNetworkCoarse(Network):
 
     def forward(self, input_image, height):
         # Compute the cnn features
+
         height = height.to(torch.float32)
         image_features = self.conv(input_image)
         image_features_flat = torch.reshape(image_features, (input_image.shape[0], -1))
