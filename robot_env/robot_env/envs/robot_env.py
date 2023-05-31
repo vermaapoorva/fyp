@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-
+import matplotlib.pyplot as plt
 from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object, Shape
 from os.path import dirname, join, abspath
@@ -84,6 +84,7 @@ class RobotEnv(gym.Env):
         self.goal_camera.set_orientation(self.goal_orientation)
 
         self.save_goal_image(file_name)
+        self.save_initial_image(file_name)
 
         self.agent.set_position(self.get_random_agent_pos())
         self.agent.set_orientation(self.get_random_agent_orientation())
@@ -91,14 +92,27 @@ class RobotEnv(gym.Env):
         self.max_distance_to_goal = self.get_max_distance_to_goal()
 
     def save_goal_image(self, file_name):
+        self.agent.set_position(self.goal_pos)
+        self.agent.set_orientation(self.goal_orientation)
         self.pr.step()
-        image = self.goal_camera.capture_rgb()
+        image = self.agent.capture_rgb()
+        # print("image:", image)
+        scene_name_without_ttt = file_name[:-4]
         resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
+        # resized = cv2.resize(resized, (self.image_size, self.image_size), interpolation = cv2.INTER_AREA)
         resized = resized.astype(np.uint8)
-        scene_name_without_ttt = file_name.split(".")[0]
-        # save image
-        Image.fromarray(resized).save("goal_" + scene_name_without_ttt + ".png")
-        # plt.imsave("goal_" + scene_name_without_ttt + ".png", resized)
+        plt.imsave("goal_" + scene_name_without_ttt + ".png", resized)
+
+    def save_initial_image(self, file_name):
+        self.agent.set_position([0, 0, 1])
+        self.agent.set_orientation([-np.pi, 0, 0])
+        self.pr.step()
+        image = self.agent.capture_rgb()
+        resized = cv2.normalize(image, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
+        # resized = cv2.resize(resized, (self.image_size, self.image_size), interpolation = cv2.INTER_AREA)
+        resized = resized.astype(np.uint8)
+        scene_name_without_ttt = file_name[:-4]
+        plt.imsave("intial_" + scene_name_without_ttt + ".png", resized)
 
     def set_goal(self, goal_pos, goal_orientation):
         self.goal_pos = goal_pos

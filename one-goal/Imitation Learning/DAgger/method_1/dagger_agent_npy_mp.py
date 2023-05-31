@@ -52,23 +52,23 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
 
         image_to_pose_trainer = ImageToPoseTrainerCoarse(task_name=task_name, scene_name=scene_file_name[:-4] ,hyperparameters=hyperparameters)
         dataset_directory = image_to_pose_trainer.dataset_directory
-        raw_dataset_directory = dataset_directory + f"raw_data_{i}/"        
-        raw_training_data_directory = raw_dataset_directory + "training_data/"
-        raw_validation_data_directory = raw_dataset_directory + "validation_data/"
+        raw_dataset_directory = dataset_directory + f"raw_data_{i}/"
 
         if not os.path.exists(raw_dataset_directory):
             os.makedirs(raw_dataset_directory)
-        if not os.path.exists(raw_training_data_directory):
-            os.makedirs(raw_training_data_directory)
-        if not os.path.exists(raw_validation_data_directory):
-            os.makedirs(raw_validation_data_directory)
 
         ##### Load the model #####
 
         image_to_pose_network = image_to_pose_trainer.get_network()
-        if checkpoint_path is not None:
-            image_to_pose_network.load_from_checkpoint(checkpoint_path)
-            checkpoint_path = None
+        
+        if start_iteration > 0:
+            checkpoint_path = '/vol/bitbucket/dagger/final/Networks/' + str(task_name) + '/network_checkpoint_iteration_' + str(iteration-1) + '.torch'
+            # If checkpoint path exists load from checkpoint
+            if os.path.exists(checkpoint_path):
+                image_to_pose_network.load_from_checkpoint(checkpoint_path)
+                start_iteration = 0
+            else:
+                print(f"No checkpoint exists at {checkpoint_path}, cannot start from iteration {start_iteration}")
         else:
             image_to_pose_network.load()
 
@@ -82,16 +82,16 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
         collect_expert_data(env=env,
                             network=image_to_pose_network,
                             amount_of_data=amount_of_training_data_per_iteration,
-                            raw_dataset_directory=raw_training_data_directory,
-                            iteration=i)
+                            raw_dataset_directory=raw_dataset_directory,
+                            starting_index=0)
 
         print(f"Collecting validation data for iteration {i}...")
 
         collect_expert_data(env=env,
                             network=image_to_pose_network,
                             amount_of_data=amount_of_validation_data_per_iteration,
-                            raw_dataset_directory=raw_validation_data_directory,
-                            iteration=i)
+                            raw_dataset_directory=raw_dataset_directory,
+                            starting_index=amount_of_training_data_per_iteration)
 
         ##### Update model with new expert data #####
 
@@ -101,9 +101,9 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
 
         ##### Train the model #####
 
-        image_to_pose_trainer.train()
+        image_to_pose_trainer.train(iteration=i)
 
-def collect_expert_data(env, network, amount_of_data, raw_dataset_directory, iteration):
+def collect_expert_data(env, network, amount_of_data, raw_dataset_directory, starting_index):
 
     amount_of_data_collected = 0
 
@@ -135,10 +135,10 @@ def collect_expert_data(env, network, amount_of_data, raw_dataset_directory, ite
                 endpoint_height = env.env_method("get_agent_position", indices=i)[0][2]
 
                 image = np.transpose(image, (1, 2, 0))
-                plt.imsave(f"{raw_dataset_directory}image_{amount_of_data_collected}.png", image)
+                plt.imsave(f"{raw_dataset_directory}image_{starting_index + amount_of_data_collected}.png", image)
 
                 action = np.append(action, endpoint_height)
-                np.save(f"{raw_dataset_directory}image_{amount_of_data_collected}.npy", action)
+                np.save(f"{raw_dataset_directory}image_{starting_index + amount_of_data_collected}.npy", action)
                 amount_of_data_collected += 1
 
                 if amount_of_data_collected >= amount_of_data:
@@ -174,8 +174,8 @@ def collect_expert_data(env, network, amount_of_data, raw_dataset_directory, ite
             dones = np.logical_or(dones, active_dones)
 
         for info in env.reset_infos:
-            distances_to_goal.append(info["final_distance"])
-            orientation_diffs_z.append(info["final_orientation"])
+            distances_to_goal.append(info["final_distance"][:-1])
+            orientation_diffs_z.append(info["final_orientation"][:-1])
 
         for i in range(env.num_envs):
             returns[i].append(total_return[i])

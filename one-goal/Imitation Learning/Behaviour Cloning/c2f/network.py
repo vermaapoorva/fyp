@@ -18,9 +18,12 @@ class Network(torch.nn.Module):
         # Set the class variables from the arguments
         self.network_path = network_path
 
-    def save(self):
-        torch.save(self.state_dict(), self.network_path)
-
+    def save(self, checkpoint_path=None):
+        if checkpoint_path is None:
+            torch.save(self.state_dict(), self.network_path)
+        else:
+            torch.save(self.state_dict(), checkpoint_path)
+            
     def load(self):
         print('Loading network from: ' + str(self.network_path))
         state_dict = torch.load(self.network_path)

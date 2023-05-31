@@ -11,38 +11,45 @@ import cv2
 # set np random seed
 np.random.seed(2023)
 
-scene_name = 'bowl_scene'
+scene_name = 'pitcher_scene_mp_1'
 root_dir = '/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/'
 shards_dir = '/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/'
 dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/{scene_name}/'
 # tar_file = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/{scene_name}.tar'
 
 # Create 20 random shuffled mutually exclusive subsets of indicies from 0 to 10M
-indices = np.arange(10000000)
+indices = np.arange(20000)
 np.random.shuffle(indices)
-indices = np.array_split(indices, 20)
+indices = np.array_split(indices, 2)
+print("len indicies: ", len(indices))
+# print all indices
+print(indices[0])
+print(indices[1])
+print("len indices[0]", len(indices[0]))
+print("len indices[1]", len(indices[1]))
+
 # for i in range(len(indices)):
 #     # np.save(f"indices_{i}.npy", indices[i])
 #     print(f"indices_{i}", indices[i])
 #     print("=======================================================================")
 
 # Create 20 shards of data with indicies
-index = 19
+index = 1
 current_shard_indices = indices[index]
 amount_of_data = len(current_shard_indices)
 
-sink = wds.TarWriter(f"{shards_dir}{scene_name}_shards-{index:06d}.tar")
+# sink = wds.TarWriter(f"{shards_dir}{scene_name}_10k_initial_shards-{index:06d}.tar")
 for i in range(amount_of_data):
     print(f"{i}/{amount_of_data} --- {(i/amount_of_data)*100}%")
 
     png_data = cv2.imread(f"{dataset_directory}image_{current_shard_indices[i]}.png")
     npy_data = np.load(f"{dataset_directory}image_{current_shard_indices[i]}.npy")
-
-    sink.write(
-        {"__key__": f"example{current_shard_indices[i]:08d}",
-        "png": png_data,
-        "npy": npy_data}
-    )
+    print(png_data)
+    # sink.write(
+    #     {"__key__": f"example{current_shard_indices[i]:08d}",
+    #     "png": png_data,
+    #     "npy": npy_data}
+    # )
 
 # amount_of_data = 10000
 # # shard dataset using wds.shardwriter

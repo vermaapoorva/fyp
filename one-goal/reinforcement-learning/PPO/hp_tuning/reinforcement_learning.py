@@ -107,11 +107,11 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
     # model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
     model.save(f"{logdir}/final_model.zip")
 
-def run_model(hyperparam_i, scene_num):
+def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
 
-    logdir = f"/vol/bitbucket/av1019/PPO/logs/hp_{hyperparam_i}_scene_{scene_num}/"
+    logdir = f"/vol/bitbucket/av1019/PPO/logs/{task_name}/"
 
-    env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0), logdir)
+    env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0, file_name=scene_file_name, bottleneck=bottleneck), logdir)
 
     model_path = f"{logdir}/best_model.zip"
     model = PPO.load(model_path, env=env)
@@ -120,7 +120,7 @@ def run_model(hyperparam_i, scene_num):
     successful_episodes = 0
     distances_to_goal = []
     orientation_differences_z = []
-    while total_episodes < 100:
+    while total_episodes < num_of_runs:
         obs, _ = env.reset()
         done = False
         episode_rewards = []
@@ -152,3 +152,7 @@ def run_model(hyperparam_i, scene_num):
     print(f"Distance Accuracy = Average distance to goal: {np.mean(distances_to_goal)}")
     print(f"Orientation Accuracy = Average orientation difference z: {np.mean(orientation_differences_z)}")
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
+
+    env.close()
+
+    return np.mean(distances_to_goal), np.mean(orientation_differences_z), successful_episodes, successful_episodes / total_episodes * 100

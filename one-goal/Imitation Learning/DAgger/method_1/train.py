@@ -24,21 +24,15 @@ class ImageToPoseTrainerCoarse:
         self.task_name = task_name
 
         self.dataset_directory = f'/vol/bitbucket/av1019/dagger/hyperparameters/data/{task_name}/'
-        # self.raw_dataset_directory = f'/vol/bitbucket/av1019/dagger/hyperparameters/data/{task_name}/raw/'
 
         if not os.path.exists(self.dataset_directory):
             os.makedirs(self.dataset_directory)
-
-        # if not os.path.exists(self.raw_dataset_directory):
-        #     os.makedirs(self.raw_dataset_directory)
 
         self.image_to_pose_network = ImageToPoseNetworkCoarse(task_name, hyperparameters)
 
         self.minibatch_size = hyperparameters['batch_size']
         self.init_learning_rate = hyperparameters['learning_rate']
         self.loss_orientation_coefficient = 0.01
-
-        # self.update_dataloaders(self.image_to_pose_dataset.__len__())
 
         # INITIALISE THE NETWORK
         # Set the GPU
@@ -60,15 +54,25 @@ class ImageToPoseTrainerCoarse:
 
     def update_dataloaders(self, iteration, amount_of_training_data, amount_of_validation_data):
 
-        raw_training_data_directory = self.dataset_directory + f"raw_data_{iteration}/training_data/"
+        raw_dataset_directory = self.dataset_directory + f"raw_data_{iteration}/"
+
+        indices = np.arange(amount_of_training_data + amount_of_validation_data)
+        indices = np.random.shuffle(indices)
+        training_indices, validation_indices = indices[:amount_of_training_data], indices[amount_of_training_data:]
+        
+        if iteration == 0:
+            print("Length of training indices: ", len(training_indices))
+            print("Length of validation indices: ", len(validation_indices))
+            print("Training indices: ", training_indices)
+            print("Validation indices: ", validation_indices)
 
         # Create new .tar files for the training and validation datasets
         print("Creating new .tar files for the training dataset...")
         sink = wds.TarWriter(f"{self.dataset_directory}training_shards-{iteration:06d}.tar")
-        for i in range(amount_of_training_data):
+        for i in training_indices:
             # print(f"{i}/{amount_of_training_data}")
-            png_data = open(f"{raw_training_data_directory}image_{i}.png", 'rb').read()
-            npy_data = np.load(f"{raw_training_data_directory}image_{i}.npy")
+            png_data = cv2.imread(f"{raw_dataset_directory}image_{i}.png")
+            npy_data = np.load(f"{raw_dataset_directory}image_{i}.npy")
             sink.write(
                 {"__key__": f"train_example_{iteration}_{i:08d}",
                 "png": png_data,
@@ -77,14 +81,12 @@ class ImageToPoseTrainerCoarse:
 
         sink.close()
 
-        raw_validation_data_directory = self.dataset_directory + f"raw_data_{iteration}/validation_data/"
-
         print("Creating new .tar files for the validation dataset...")
         sink = wds.TarWriter(f"{self.dataset_directory}validation_shards-{iteration:06d}.tar")
-        for i in range(amount_of_validation_data):
+        for i in validation_indices:
             # print(f"{i}/{amount_of_validation_data}")
-            png_data = open(f"{raw_validation_data_directory}image_{i}.png", 'rb').read()
-            npy_data = np.load(f"{raw_validation_data_directory}image_{i}.npy")
+            png_data = cv2.imread(f"{raw_dataset_directory}image_{i}.png")
+            npy_data = np.load(f"{raw_dataset_directory}image_{i}.npy")
             sink.write(
                 {"__key__": f"val_example_{iteration}_{i:08d}",
                 "png": png_data,
@@ -94,18 +96,13 @@ class ImageToPoseTrainerCoarse:
         self.training_dataset_directory = self.dataset_directory + f'training_shards-{{000000..{iteration:06d}}}.tar'
         self.validation_dataset_directory = self.dataset_directory + f'validation_shards-{{000000..{iteration:06d}}}.tar'
 
-        print("Training dataset directory: ", self.training_dataset_directory)
-        print("validation dataset directory: ", self.validation_dataset_directory)
-
-        self.image_to_pose_training_dataset = wds.WebDataset(self.training_dataset_directory).shuffle(10000).decode("torchrgb").to_tuple("png", "npy")
-        self.image_to_pose_validation_dataset = wds.WebDataset(self.validation_dataset_directory).shuffle(10000).decode("torchrgb").to_tuple("png", "npy")
+        self.image_to_pose_training_dataset = wds.WebDataset(self.training_dataset_directory, shardshuffle=True).decode("torchrgb").to_tuple("png", "npy")
+        self.image_to_pose_validation_dataset = wds.WebDataset(self.validation_dataset_directory, shardshuffle=True).decode("torchrgb").to_tuple("png", "npy")
 
         self.training_loader = wds.WebLoader(self.image_to_pose_training_dataset.batched(self.minibatch_size), batch_size=None, shuffle=False, num_workers=4)
         self.validation_loader = wds.WebLoader(self.image_to_pose_validation_dataset.batched(self.minibatch_size), batch_size=None, shuffle=False, num_workers=4)
 
-        # self.loader.unbatched().shuffle(10000).batched(self.minibatch_size)
-
-    def train(self):
+    def train(self, iteration):
         print('Training the network...')
         # Loop over epochs
         training_losses = []
@@ -231,6 +228,10 @@ class ImageToPoseTrainerCoarse:
 
         # Save the error, so it can be used as a prior on uncertainty
         np.save(self.bitbucket + 'Networks/' + str(self.task_name) + '/network_uncertainty_validation_error.npy', min_validation_error)
+
+        # Save a checkpoint
+        checkpoint_path = self.bitbucket + 'Networks/' + str(self.task_name) + '/network_checkpoint_iteration_' + str(iteration) + '.torch'
+        self.image_to_pose_network.save(checkpoint_path)
 
         # Return the minimum loss and error
         return min_validation_loss, min_validation_error

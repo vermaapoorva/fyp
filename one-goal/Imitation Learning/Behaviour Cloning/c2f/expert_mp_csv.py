@@ -78,7 +78,7 @@ def expert_policy_to_target(env):
         elif orientation_diffs_z[i] > np.pi:
             orientation_diffs_z[i] -= 2 * np.pi
 
-        orientation_diffs_z[i] = np.clip(orientation_diffs_z[i], -0.02 * np.pi, 0.02 * np.pi)
+        orientation_diffs_z[i] = np.clip(orientation_diffs_z[i], -0.03 * np.pi, 0.03 * np.pi)
 
     for i in range(env.num_envs):
         actions.append(np.array([x_diffs[i], y_diffs[i], z_diffs[i], orientation_diffs_z[i]], dtype=np.float32))
@@ -117,7 +117,7 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
 
     # env = gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck)
     env = make_vec_env("RobotEnv-v2",
-                        n_envs=16,
+                        n_envs=1,
                         vec_env_cls=SubprocVecEnv,
                         env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
@@ -127,7 +127,7 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
     orientation_diffs_z = []
     # images = []
 
-    translation_noise = 0.025
+    translation_noise = 0.05
     rotation_noise = 0.03*np.pi
     data = []
     amount_of_actions_collected = 0
@@ -215,17 +215,17 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
     env.close()
 
 if __name__ == "__main__":
-    # scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
-    #         ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
-    #         ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
-    #         ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
-    #         ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
-    #         ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
+    scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
+            ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
+            ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
+            ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
+            ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
+            ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
 
-    scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
-            ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
-            ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
-            ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
+    # scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
+    #         ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
+    #         ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
+    #         ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
 
             # ["cutlery_block_scene.ttt", [-0.03, 0.01, 0.768, 0.351]],
             # ["cutlery_block_scene.ttt", [0.025, -0.045, 0.79, -0.424]]]
@@ -236,11 +236,11 @@ if __name__ == "__main__":
 
     # Collect 1M samples for each scene
     # num_of_samples = 1000000
-    num_of_samples = 1000000
+    num_of_samples = 10000
     scene_index = 0
-    run_index = 0
+    run_index = 1
     scene_name = scenes[scene_index][0].split(".")[0]
-    task_name = f"{scene_name}"
+    task_name = f"{scene_name}_mp_1"
     collect_data(scene_file_name=scenes[scene_index][0],
                     bottleneck=scenes[scene_index][1],
                     num_of_samples=num_of_samples,

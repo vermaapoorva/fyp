@@ -58,15 +58,15 @@ if __name__ == "__main__":
                         {"net_arch": [64, 128, 64], "learning_rate": 0.0001, "batch_size": 64},
                         {"net_arch": [64, 128, 64], "learning_rate": 0.00001, "batch_size": 64}]
 
-    final_hyperparameters = {"net_arch": [32, 64, 128, 256],
-                                "learning_rate": 0.001,
-                                "batch_size": 64,
-                                "amount_of_data": 10000,
-                                "num_dagger_iterations": 10}
+    # final_hyperparameters = {"net_arch": [32, 64, 128, 256],
+    #                             "learning_rate": 0.001,
+    #                             "batch_size": 64,
+    #                             "amount_of_data": 10000,
+    #                             "num_dagger_iterations": 10}
 
     # scene_index = 0
 
-    for i in range(24, 36):
+    for i in range(30, 36):
 
         results = []
 
@@ -74,45 +74,41 @@ if __name__ == "__main__":
         hyperparameter["num_dagger_iterations"] = 10
         hyperparameter["amount_of_data"] = 10000
 
-        hyperparameter = final_hyperparameters
-
         for scene_index, scene in enumerate(scenes):
-
-            # name_of_task = f"10000_tuning_scene_{scene_index}_hp_{i}"
+            # if scene_index==0:
+            #     continue
 
             scene_file_name = scenes[scene_index][0]
             scene_name = scene_file_name.split(".")[0]
 
-            # name_of_task = f"try_webdataset_10k_10_val_1_env_10_iters"
-
             name_of_task = f"final_tuning_scene_{scene_index}_hp_{i}"
 
-            start = time.process_time()
-            train_model(task_name=name_of_task,
-                        scene_file_name=scene_file_name,
-                        bottleneck=scene[1],
-                        hyperparameters=hyperparameter)
-            end = time.process_time()
+            # start = time.process_time()
+            # train_model(task_name=name_of_task,
+            #             scene_file_name=scene_file_name,
+            #             bottleneck=scene[1],
+            #             hyperparameters=hyperparameter)
+            # end = time.process_time()
 
-            print("Training time: " + str(end - start) + " seconds")
+            # print("Training time: " + str(end - start) + " seconds")
 
             average_steps, distance_error, orientation_error = run_model(task_name=name_of_task,
                                                             scene_name=scenes[scene_index][0],
                                                             bottleneck=scenes[scene_index][1],
                                                             hyperparameters=hyperparameter,
-                                                            num_of_runs=20)
+                                                            num_of_runs=1)
 
-            results.append({"scene_index": scene_index,
-                            "net_arch": hyperparameter['net_arch'],
-                            "learning_rate": hyperparameter['learning_rate'],
-                            "batch_size": hyperparameter['batch_size'],
-                            "distance_error": distance_error,
-                            "orientation_error": orientation_error,
-                            "training_time": end - start})
+            # results.append({"scene_index": scene_index,
+            #                 "net_arch": hyperparameter['net_arch'],
+            #                 "learning_rate": hyperparameter['learning_rate'],
+            #                 "batch_size": hyperparameter['batch_size'],
+            #                 "distance_error": distance_error,
+            #                 "orientation_error": orientation_error,
+            #                 "training_time": end - start})
 
-            # Sort results by orientation error
-            print(results)
+            # # Sort results by orientation error
+            # print(results)
 
-            # Save results
-            with open(f"/vol/bitbucket/av1019/dagger/hyperparameters/final_tuning_hp_{i}.json", "w") as f:
-                json.dump(results, f, indent=4)
+            # # Save results
+            # with open(f"/vol/bitbucket/av1019/dagger/hyperparameters/final_tuning_hp_{i}.json", "w") as f:
+            #     json.dump(results, f, indent=4)

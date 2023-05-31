@@ -91,6 +91,7 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
     )
 
     model = SAC('CnnPolicy', env, seed=seed, buffer_size=buffer_size, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    # model = SAC.load(f"{logdir}/best_model.zip", env=env, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     eval_callback = EvalCallback(eval_env,
@@ -103,22 +104,26 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
     # Train the agent for 1.5M timesteps
     timesteps = 1500000
     model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
+    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
     model.save(f"{logdir}/final_model.zip")
 
-def run_model(hyperparam_i, scene_num):
+    env.close()
+    eval_env.close()
 
-    logdir = f"/vol/bitbucket/av1019/SAC/logs/hp_{hyperparam_i}_scene_{scene_num}/"
+def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
 
-    env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0), logdir)
+    logdir = f"/vol/bitbucket/av1019/SAC/logs/{task_name}/"
+
+    env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0, file_name=scene_file_name, bottleneck=bottleneck), logdir)
 
     model_path = f"{logdir}/best_model.zip"
-    model = PPO.load(model_path, env=env)
+    model = SAC.load(model_path, env=env)
 
     total_episodes = 0
     successful_episodes = 0
     distances_to_goal = []
     orientation_differences_z = []
-    while total_episodes < 100:
+    while total_episodes < num_of_runs:
         obs, _ = env.reset()
         done = False
         episode_rewards = []
@@ -150,3 +155,7 @@ def run_model(hyperparam_i, scene_num):
     print(f"Distance Accuracy = Average distance to goal: {np.mean(distances_to_goal)}")
     print(f"Orientation Accuracy = Average orientation difference z: {np.mean(orientation_differences_z)}")
     print(f"Reliability = Percentage of successful episodes (out of total): {successful_episodes / total_episodes * 100}%")
+
+    env.close()
+
+    return np.mean(distances_to_goal), np.mean(orientation_differences_z), successful_episodes, successful_episodes / total_episodes * 100
