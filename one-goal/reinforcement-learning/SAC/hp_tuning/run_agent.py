@@ -41,17 +41,17 @@ if __name__ == '__main__':
     # [32, 64, 32] --- 621608 params
     # [64, 128, 64] --- 650664 params
 
-    scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
-                ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
-                ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
-                ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
-                ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
-                ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
+    # scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
+    #             ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
+    #             ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
+    #             ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
+    #             ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
+    #             ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
 
-    # scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
-    #     ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
-    #     ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
-    #     ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
+    scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
+        ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
+        ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
+        ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
 
 
     # If PPO directory doesn't exist, create it

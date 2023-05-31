@@ -27,7 +27,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common import results_plotter
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
-from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, StopTrainingOnRewardThreshold
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, StopTrainingOnRewardThreshold, CheckpointCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
 from stable_baselines3 import PPO
@@ -88,23 +88,27 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
         net_arch=dict(pi=net_arch, vf=net_arch)
     )
 
-    # model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
-    model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
+    # model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     eval_callback = EvalCallback(eval_env,
                                     best_model_save_path=logdir,
                                     log_path=logdir,
-                                    eval_freq=20000,
+                                    eval_freq=50000,
                                     # callback_on_new_best=callback_on_best,
                                     deterministic=True,
                                     verbose=1)
+    # scene file name without .ttt
+    scene_name = scene_file_name.split(".")[0]
+    checkpoint_callback = CheckpointCallback(save_freq=500000, save_path=logdir,
+                                         name_prefix=f'final_model_{scene_name}')
 
     # Train the agent for 7.5M timesteps
-    timesteps = 7000000
-    model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
-    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
+    timesteps = 15000000
+    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
+    model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback])
     model.save(f"{logdir}/final_model.zip")
 
 def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):

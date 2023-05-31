@@ -1,0 +1,45 @@
+Traceback (most recent call last):
+  File "/homes/av1019/FYP/fyp/one-goal/reinforcement-learning/PPO/hp_tuning/run_agent.py", line 1, in <module>
+    from reinforcement_learning import train, run_model, get_number_of_parameters
+  File "/homes/av1019/FYP/fyp/one-goal/reinforcement-learning/PPO/hp_tuning/reinforcement_learning.py", line 3, in <module>
+    from stable_baselines3 import PPO, SAC
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/stable_baselines3/__init__.py", line 3, in <module>
+    from stable_baselines3.a2c import A2C
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/stable_baselines3/a2c/__init__.py", line 1, in <module>
+    from stable_baselines3.a2c.a2c import A2C
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/stable_baselines3/a2c/a2c.py", line 3, in <module>
+    import torch as th
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/torch/__init__.py", line 1465, in <module>
+    from . import _meta_registrations
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/torch/_meta_registrations.py", line 7, in <module>
+    from torch._decomp import _add_op_to_registry, global_decomposition_table, meta_table
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/torch/_decomp/__init__.py", line 169, in <module>
+    import torch._decomp.decompositions
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/torch/_decomp/decompositions.py", line 10, in <module>
+    import torch._prims as prims
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/torch/_prims/__init__.py", line 33, in <module>
+    from torch._subclasses.fake_tensor import FakeTensor, FakeTensorMode
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/torch/_subclasses/__init__.py", line 3, in <module>
+    from torch._subclasses.fake_tensor import (
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 13, in <module>
+    from torch._guards import Source
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/torch/_guards.py", line 14, in <module>
+    import sympy  # type: ignore[import]
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/sympy/__init__.py", line 107, in <module>
+    from .series import (Order, O, limit, Limit, gruntz, series, approximants,
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/sympy/series/__init__.py", line 4, in <module>
+    from .limits import limit, Limit
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/sympy/series/limits.py", line 1, in <module>
+    from sympy.calculus.accumulationbounds import AccumBounds
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/sympy/calculus/__init__.py", line 8, in <module>
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/sympy/calculus/util.py", line 1, in <module>
+    from .accumulationbounds import AccumBounds, AccumulationBounds # noqa: F401
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/sympy/calculus/accumulationbounds.py", line 703, in <module>
+    def _eval_is_le(lhs, rhs): # noqa:F811
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/sympy/multipledispatch/core.py", line 61, in _
+    if ismethod(func):
+  File "/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/sympy/multipledispatch/core.py", line 81, in ismethod
+    signature = inspect.signature(func)
+  File "/usr/lib/python3.10/inspect.py", line 3245, in signature
+    def signature(obj, *, follow_wrapped=True, globals=None, locals=None, eval_str=False):
+KeyboardInterrupt

@@ -67,7 +67,7 @@ def expert_policy(env):
     return action
 
 
-def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, start_index=0):
+def collect_data(scene_file_name, bottleneck, task_name, num_of_samples=20):
 
     # If behavioural cloning directory doesn't exist create it
     if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning"):
@@ -85,16 +85,9 @@ def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, star
     print("Bottleneck:", bottleneck)
     print("Number of samples:", num_of_samples)
 
-    logdir = "/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_no_mp/"
+    logdir = f"/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/{task_name}/"
 
-    # If expert_data directory doesn't exist create it
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
-
-    # scene_file_name = scene_file_name[:-4]
-    logdir += task_name + "/"
-
-    # If scene directory doesn't exist create it
+    # make dir
     if not os.path.exists(logdir):
         os.makedirs(logdir)
     
@@ -108,12 +101,6 @@ def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, star
     orientation_z_diffs = []
     amount_of_data_collected = 0
     images = []
-
-    # # Get amount of data in file
-    # if os.path.exists(logdir + output_file) and os.stat(logdir + output_file).st_size != 0:
-    #     with open(logdir + output_file, "rb") as f:
-    #         amount_of_data_collected = len(pickle.load(f))
-    #         print("amount of data:", amount_of_data_collected)
 
     translation_noise = 0.05
     rotation_noise = 0.03*np.pi
@@ -151,13 +138,11 @@ def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, star
 
             # data.append({"image": obs, "action": expert_action_to_bottleneck, "endpoint_height": env.agent.get_position()[2]})
 
-            # image = np.transpose(image, (1, 2, 0))
-            # plt.imsave(f"{logdir}image_{start_index+amount_of_data_collected}.png", obs)
-            np.save(f"{logdir}image_{start_index+amount_of_data_collected}.npy", obs)
+            np.save(f"{logdir}image_{amount_of_data_collected}.npy", obs)
 
             # append endpoint height to action
             action = np.append(expert_action_to_bottleneck, env.agent.get_position()[2])
-            np.save(f"{logdir}action_{start_index+amount_of_data_collected}.npy", action)
+            np.save(f"{logdir}action_{amount_of_data_collected}.npy", action)
 
             amount_of_data_collected += 1
 
@@ -170,26 +155,9 @@ def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, star
         # print("Episode completed in", steps, "steps.")
         print(f"{amount_of_data_collected}/{num_of_samples} --- {(amount_of_data_collected/num_of_samples)*100}%")
 
-        # # If file doesn't exist or is empty, create new one
-        # if not os.path.exists(logdir + output_file) or os.stat(logdir + output_file).st_size == 0:
-        #     with open(logdir + output_file, "wb") as f:
-        #         pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-        # # Else append to existing file
-        # else:
-        #     with open(logdir + output_file, "rb") as f:
-        #         existing_data = pickle.load(f)
-        #     existing_data.extend(data)
-        #     with open(logdir + output_file, "wb") as f:
-        #         pickle.dump(existing_data, f, pickle.HIGHEST_PROTOCOL)
-
         returns.append(total_return)
         distances_to_goal.append(env.get_distance_to_goal())
         orientation_z_diffs.append(env.get_orientation_diff_z())
-        
-        # # Get amount of data in file
-        # with open(logdir + output_file, "rb") as f:
-        #     amount_of_data_collected = len(pickle.load(f))
-        #     print("amount of data:", amount_of_data_collected)
 
     print("mean return", np.mean(returns))
     print("std of return", np.std(returns))
@@ -198,22 +166,6 @@ def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, star
     print("mean orientation z diff", np.mean(orientation_z_diffs))
     print("std of orientation z diff", np.std(orientation_z_diffs))
 
-    # # Save data to file
-    # with open(logdir + str(len(observations)) + "_" + output_file, "wb") as f:
-    #     pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-
-    # # Create images dir if not exist
-    if not os.path.exists(os.path.join(logdir, "images")):
-        os.makedirs(os.path.join(logdir, "images"))
-    # Save observations as images
-    for i in range(len(images)):
-        image = images[i]
-        # make it channel last
-        image = np.transpose(image, (1, 2, 0))
-        # save image
-        image_file_name = "images/image_" + str(i) + ".png"
-        image_file_path = os.path.join(logdir, image_file_name)
-        plt.imsave(image_file_path, image)
     env.close()
 
 if __name__ == "__main__":
@@ -225,13 +177,6 @@ if __name__ == "__main__":
             ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
 
     # Collect 1M samples for each scene
-    num_of_samples = 10000
-    scene_index = 0
-    run_index = 1
-    scene_name = scenes[scene_index][0].split('.')[0]
-    task_name = f"{scene_name}_data"
-
-    collect_data(task_name=task_name, scene_file_name=scenes[scene_index][0],
-                                        bottleneck=scenes[scene_index][1],
-                                        num_of_samples=num_of_samples,
-                                        start_index=num_of_samples*run_index)
+    num_of_samples = 12000
+    for scene in scenes[0:1]:
+        collect_data(scene[0], scene[1], task_name="pitcher_scene_12000", num_of_samples=num_of_samples)

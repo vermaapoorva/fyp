@@ -1,0 +1,116 @@
+2023-05-31 06:45:04.049368: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Training final model for scene 0 with seed 1019
+Training on scene: cutlery_block_scene.ttt
+Bottleneck x: -0.023
+Bottleneck y: -0.08
+Bottleneck z: 0.75
+Bottleneck z angle: -3.14
+Hyperparameters: {'net_arch': [128, 128], 'batch_size': 4096, 'n_steps': 2048}
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+/vol/bitbucket/av1019/fypenv/lib/python3.10/site-packages/gymnasium/spaces/box.py:130: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  gym.logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+error: library ( /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so ) load: "Cannot load library /homes/av1019/FYP/fyp/CoppeliaSim_Edu_V4_5_1_rev0_Ubuntu22_04/libsimExtROS2.so: (libstd_srvs__rosidl_typesupport_cpp.so: cannot open shared object file: No such file or directory)"
+Using cuda device
+Logging to /vol/bitbucket/av1019/PPO/tensorboard_logs/final_model_scene_0_seed_1019/PPO_1
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 500      |
+|    ep_rew_mean     | -285     |
+| time/              |          |
+|    fps             | 96       |
+|    iterations      | 1        |
+|    time_elapsed    | 341      |
+|    total_timesteps | 32768    |
+---------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 500         |
+|    ep_rew_mean          | -238        |
+| time/                   |             |
+|    fps                  | 95          |
+|    iterations           | 2           |
+|    time_elapsed         | 684         |
+|    total_timesteps      | 65536       |
+| train/                  |             |
+|    approx_kl            | 0.004993838 |
+|    clip_fraction        | 0.0551      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -5.67       |
+|    explained_variance   | 0.0117      |
+|    learning_rate        | 0.0003      |
+|    loss                 | 2.94        |
+|    n_updates            | 10          |
+|    policy_gradient_loss | -0.00431    |
+|    std                  | 0.998       |
+|    value_loss           | 10.7        |
+-----------------------------------------
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 500         |
+|    ep_rew_mean          | -192        |
+| time/                   |             |
+|    fps                  | 96          |
+|    iterations           | 3           |
+|    time_elapsed         | 1023        |
+|    total_timesteps      | 98304       |
+| train/                  |             |
+|    approx_kl            | 0.004635952 |
+|    clip_fraction        | 0.023       |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -5.67       |
+|    explained_variance   | 0.255       |
+|    learning_rate        | 0.0003      |
+|    loss                 | 5.23        |
+|    n_updates            | 20          |
+|    policy_gradient_loss | -0.00192    |
+|    std                  | 0.997       |
+|    value_loss           | 17.3        |
+-----------------------------------------

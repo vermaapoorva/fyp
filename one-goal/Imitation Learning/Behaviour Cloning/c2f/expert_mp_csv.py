@@ -170,6 +170,12 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
                 action = expert_actions_to_bottleneck[i]
                 endpoint_height = env.env_method("get_agent_position", indices=i)[0][2]
 
+                if amount_of_data_collected == 0:
+                    print("image:", image)
+                    print("image_max:", np.max(image))
+                    print("image_min:", np.min(image))
+                    print("image_shape:", image.shape)
+
                 image = np.transpose(image, (1, 2, 0))
                 plt.imsave(f"{logdir}image_{start_index+amount_of_data_collected}.png", image)
 
@@ -236,11 +242,11 @@ if __name__ == "__main__":
 
     # Collect 1M samples for each scene
     # num_of_samples = 1000000
-    num_of_samples = 10000
+    num_of_samples = 1000
     scene_index = 0
-    run_index = 1
+    run_index = 0
     scene_name = scenes[scene_index][0].split(".")[0]
-    task_name = f"{scene_name}_mp_1"
+    task_name = f"{scene_name}_mp_1_1k"
     collect_data(scene_file_name=scenes[scene_index][0],
                     bottleneck=scenes[scene_index][1],
                     num_of_samples=num_of_samples,
