@@ -1,4 +1,4 @@
-from train import ImageToPoseTrainerCoarse
+from train_mp import ImageToPoseTrainerCoarse
 from network import ImageToPoseNetworkCoarse
 
 import gymnasium as gym
@@ -14,7 +14,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.monitor import Monitor
 
-def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpoint_path=None, start_iteration=0):
+def train_model(task_name, scene_file_name, bottleneck, hyperparameters, start_iteration=0, training_shards_next_index=0, validation_shards_next_index=0):
 
     amount_of_training_data = hyperparameters["amount_of_data"]
     num_dagger_iterations = hyperparameters["num_dagger_iterations"]
@@ -38,14 +38,16 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
 
     ##### Create environment #####
     # env = gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck)
-    env = make_vec_env("RobotEnv-v2",
-                        n_envs=1,
-                        vec_env_cls=SubprocVecEnv,
-                        env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
     for i in trange(num_dagger_iterations):
 
+        env = make_vec_env("RobotEnv-v2",
+                            n_envs=16,
+                            vec_env_cls=SubprocVecEnv,
+                            env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
+
         if i < start_iteration:
+            print("Skipping iteration ", i)
             continue
 
         ##### Load the trainer #####
@@ -62,13 +64,15 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
         image_to_pose_network = image_to_pose_trainer.get_network()
         
         if start_iteration > 0:
-            checkpoint_path = '/vol/bitbucket/dagger/final/Networks/' + str(task_name) + '/network_checkpoint_iteration_' + str(iteration-1) + '.torch'
+            print(f"Loading network from checkpoint {start_iteration-1}...")
+            checkpoint_path = '/vol/bitbucket/av1019/dagger/hyperparameters/Networks/' + str(task_name) + '/network_checkpoint_iteration_' + str(start_iteration-1) + '.torch'
             # If checkpoint path exists load from checkpoint
             if os.path.exists(checkpoint_path):
                 image_to_pose_network.load_from_checkpoint(checkpoint_path)
                 start_iteration = 0
             else:
                 print(f"No checkpoint exists at {checkpoint_path}, cannot start from iteration {start_iteration}")
+                return
         else:
             image_to_pose_network.load()
 
@@ -93,11 +97,15 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, checkpo
                             raw_dataset_directory=raw_dataset_directory,
                             starting_index=amount_of_training_data_per_iteration)
 
+        env.close()
+
         ##### Update model with new expert data #####
 
-        image_to_pose_trainer.update_dataloaders(iteration=i,
-                                                amount_of_training_data=amount_of_training_data_per_iteration,
-                                                amount_of_validation_data=amount_of_validation_data_per_iteration)
+        training_shards_next_index, validation_shards_next_index = image_to_pose_trainer.update_dataloaders(iteration=i,
+                                                                                                            amount_of_training_data=amount_of_training_data_per_iteration,
+                                                                                                            amount_of_validation_data=amount_of_validation_data_per_iteration,
+                                                                                                            training_shards_next_index=training_shards_next_index,
+                                                                                                            validation_shards_next_index=validation_shards_next_index)
 
         ##### Train the model #####
 
@@ -130,15 +138,17 @@ def collect_expert_data(env, network, amount_of_data, raw_dataset_directory, sta
             expert_actions = expert_policy(env)
 
             for i in active_envs_indices:
-                image = np.array(obss[i])
+                image = obss[i]
                 action = expert_actions[i]
                 endpoint_height = env.env_method("get_agent_position", indices=i)[0][2]
 
-                image = np.transpose(image, (1, 2, 0))
-                plt.imsave(f"{raw_dataset_directory}image_{starting_index + amount_of_data_collected}.png", image)
+                # image = np.transpose(image, (1, 2, 0))
+                image = image.astype(np.float32)
+                image = image / 255.0
+                np.save(f"{raw_dataset_directory}image_{starting_index + amount_of_data_collected}.npy", image)
 
                 action = np.append(action, endpoint_height)
-                np.save(f"{raw_dataset_directory}image_{starting_index + amount_of_data_collected}.npy", action)
+                np.save(f"{raw_dataset_directory}action_{starting_index + amount_of_data_collected}.npy", action)
                 amount_of_data_collected += 1
 
                 if amount_of_data_collected >= amount_of_data:
@@ -174,8 +184,8 @@ def collect_expert_data(env, network, amount_of_data, raw_dataset_directory, sta
             dones = np.logical_or(dones, active_dones)
 
         for info in env.reset_infos:
-            distances_to_goal.append(info["final_distance"][:-1])
-            orientation_diffs_z.append(info["final_orientation"][:-1])
+            distances_to_goal.append(info["final_distance"])
+            orientation_diffs_z.append(info["final_orientation"])
 
         for i in range(env.num_envs):
             returns[i].append(total_return[i])

@@ -6,7 +6,7 @@ import json
 
 if __name__ == '__main__':
 
-    final_seed = 1019
+    final_seed = 210423
 
     # If PPO directory doesn't exist, create it
     if not os.path.exists("/vol/bitbucket/av1019/PPO"):
@@ -27,10 +27,12 @@ if __name__ == '__main__':
         ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
         ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
 
-    scene_num = 1
+    scene_num = 3
 
     task_name = f"final_model_scene_{scene_num}_seed_{final_seed}"
     scene_file_name, bottleneck = scenes[scene_num]
+
+    results = []
 
     # Train the model
     print(f"Training final model for scene {scene_num} with seed {final_seed}")

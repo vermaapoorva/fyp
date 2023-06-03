@@ -88,9 +88,9 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
         net_arch=dict(pi=net_arch, vf=net_arch)
     )
 
-    model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    # model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
-    # model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
+    model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     eval_callback = EvalCallback(eval_env,
@@ -102,13 +102,14 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
                                     verbose=1)
     # scene file name without .ttt
     scene_name = scene_file_name.split(".")[0]
-    checkpoint_callback = CheckpointCallback(save_freq=500000, save_path=logdir,
+    # 16 envs so save every 500000/16 = 31250 steps
+    checkpoint_callback = CheckpointCallback(save_freq=31250, save_path=logdir,
                                          name_prefix=f'final_model_{scene_name}')
 
     # Train the agent for 7.5M timesteps
     timesteps = 15000000
-    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
-    model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback])
+    model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback], reset_num_timesteps=False)
+    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback])
     model.save(f"{logdir}/final_model.zip")
 
 def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):

@@ -18,11 +18,11 @@ class Network(torch.nn.Module):
         # Set the class variables from the arguments
         self.network_path = network_path
 
-    def save(self):
-        torch.save(self.state_dict(), self.network_path)
-
-    def save_checkpoint(self, checkpoint_path):
-        torch.save(self.state_dict(), checkpoint_path)
+    def save(self, checkpoint_path=None):
+        if checkpoint_path is None:
+            torch.save(self.state_dict(), self.network_path)
+        else:
+            torch.save(self.state_dict(), checkpoint_path)
 
     def load(self):
         # If the network file doesn't exist (it has not been trained yet), then create a new one.

@@ -24,8 +24,8 @@ class ImageToPoseTrainerCoarse:
                                                     
         self.image_to_pose_network = ImageToPoseNetworkCoarse(task_name, hyperparameters)
 
-        self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_shards-{{000000..000001}}.tar'
-        self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_shards-{{000002..000002}}.tar'
+        self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_large_translation_noise_2_shards-{{000000..000009}}.tar'
+        self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_large_translation_noise_2_shards-{{000010..000010}}.tar'
 
         # self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/shards/{scene_name}_12000_train_shards-{{000000..000004}}.tar'
         # self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/shards/{scene_name}_12000_train_shards-{{000005..000009}}.tar'

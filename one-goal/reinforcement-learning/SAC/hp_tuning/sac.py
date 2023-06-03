@@ -90,8 +90,8 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
         net_arch=dict(pi=net_arch, qf=net_arch)
     )
 
-    model = SAC('CnnPolicy', env, seed=seed, buffer_size=buffer_size, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
-    # model = SAC.load(f"{logdir}/best_model.zip", env=env, tensorboard_log=tensorboard_log_dir)
+    # model = SAC('CnnPolicy', env, seed=seed, buffer_size=buffer_size, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = SAC.load(f"{logdir}/best_model.zip", env=env, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     eval_callback = EvalCallback(eval_env,
@@ -102,9 +102,9 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
                                     verbose=1)
 
     # Train the agent for 1.5M timesteps
-    timesteps = 1500000
-    model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
-    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
+    timesteps = 4000000
+    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
+    model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
     model.save(f"{logdir}/final_model.zip")
 
     env.close()

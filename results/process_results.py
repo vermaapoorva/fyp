@@ -1,8 +1,8 @@
 import json
 import numpy as np
 
-for i in range(0, 36):
-    file_name = f"/vol/bitbucket/av1019/dagger/hyperparameters/final_tuning_hp_{i}.json"
+for i in range(0, 1):
+    file_name = f"/vol/bitbucket/av1019/SAC/hyperparameters/results/final_tuning_buffer_size_1000.json"
 
     # Read JSON file
     with open(file_name, 'r') as file:

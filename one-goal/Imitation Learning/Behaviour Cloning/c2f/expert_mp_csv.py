@@ -117,7 +117,7 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
 
     # env = gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck)
     env = make_vec_env("RobotEnv-v2",
-                        n_envs=1,
+                        n_envs=16,
                         vec_env_cls=SubprocVecEnv,
                         env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
@@ -166,22 +166,18 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
             expert_actions_to_target = expert_policy_to_target(env)
 
             for i in active_envs_indices:
-                image = np.array(obss[i])
+                image = obss[i]
                 action = expert_actions_to_bottleneck[i]
                 endpoint_height = env.env_method("get_agent_position", indices=i)[0][2]
 
-                if amount_of_data_collected == 0:
-                    print("image:", image)
-                    print("image_max:", np.max(image))
-                    print("image_min:", np.min(image))
-                    print("image_shape:", image.shape)
-
-                image = np.transpose(image, (1, 2, 0))
-                plt.imsave(f"{logdir}image_{start_index+amount_of_data_collected}.png", image)
+                # image = np.transpose(image, (1, 2, 0))
+                image = image.astype(np.float32)
+                image = image / 255.0
+                np.save(f"{logdir}image_{start_index+amount_of_data_collected}.npy", image)
 
                 # append endpoint height to action
                 action = np.append(action, endpoint_height)
-                np.save(f"{logdir}image_{start_index+amount_of_data_collected}.npy", action)
+                np.save(f"{logdir}action_{start_index+amount_of_data_collected}.npy", action)
                 amount_of_data_collected += 1
 
                 if amount_of_data_collected >= num_of_samples:
@@ -221,17 +217,17 @@ def collect_data(scene_file_name, bottleneck, num_of_samples, task_name, start_i
     env.close()
 
 if __name__ == "__main__":
-    scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
-            ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
-            ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
-            ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
-            ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
-            ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
+    # scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
+    #         ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
+    #         ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
+    #         ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
+    #         ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
+    #         ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
 
-    # scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
-    #         ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
-    #         ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
-    #         ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
+    scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
+            ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
+            ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
+            ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
 
             # ["cutlery_block_scene.ttt", [-0.03, 0.01, 0.768, 0.351]],
             # ["cutlery_block_scene.ttt", [0.025, -0.045, 0.79, -0.424]]]
@@ -240,13 +236,13 @@ if __name__ == "__main__":
     #         ["wooden_block_scene.ttt", [-0.0253, 0.0413, 0.791, -2.164]],
     #         ["wooden_block_scene.ttt", [0.0321, 0.0123, 0.782, -0.262]]]
 
-    # Collect 1M samples for each scene
+    # Collect 500k samples for each scene
     # num_of_samples = 1000000
-    num_of_samples = 1000
-    scene_index = 0
-    run_index = 0
+    num_of_samples = 500000
+    scene_index = 3
+    run_index = 19
     scene_name = scenes[scene_index][0].split(".")[0]
-    task_name = f"{scene_name}_mp_1_1k"
+    task_name = f"{scene_name}_large_translation_noise"
     collect_data(scene_file_name=scenes[scene_index][0],
                     bottleneck=scenes[scene_index][1],
                     num_of_samples=num_of_samples,
