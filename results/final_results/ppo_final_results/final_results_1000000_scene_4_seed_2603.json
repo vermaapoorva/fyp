@@ -1,0 +1,11 @@
+[
+    {
+        "scene_index": 4,
+        "seed": 2603,
+        "amount_of_data": 1000000,
+        "distance_error": 0.07056356181730457,
+        "orientation_error": 1.471612738731433,
+        "successful_episodes": 0,
+        "percentage_of_successful_episodes": 0.0
+    }
+]

@@ -109,6 +109,9 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, start_i
 
         ##### Train the model #####
 
+        # Reset network
+        image_to_pose_trainer.reset_network()
+
         image_to_pose_trainer.train(iteration=i)
 
 def collect_expert_data(env, network, amount_of_data, raw_dataset_directory, starting_index):

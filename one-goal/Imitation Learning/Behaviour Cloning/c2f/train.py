@@ -24,11 +24,8 @@ class ImageToPoseTrainerCoarse:
                                                     
         self.image_to_pose_network = ImageToPoseNetworkCoarse(task_name, hyperparameters)
 
-        self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_large_translation_noise_2_shards-{{000000..000009}}.tar'
-        self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_large_translation_noise_2_shards-{{000010..000010}}.tar'
-
-        # self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/shards/{scene_name}_12000_train_shards-{{000000..000004}}.tar'
-        # self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/shards/{scene_name}_12000_train_shards-{{000005..000009}}.tar'
+        self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/final_shards/{scene_name}_large_translation_noise_2_shards-{{000000..000699}}.tar'
+        self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/final_shards/{scene_name}_large_translation_noise_2_shards-{{000700..000724}}.tar'
 
         self.minibatch_size = hyperparameters['batch_size']
         self.init_learning_rate = hyperparameters['learning_rate']
@@ -37,8 +34,8 @@ class ImageToPoseTrainerCoarse:
         self.image_to_pose_training_dataset = wds.WebDataset(self.training_dataset_directory).decode().to_tuple("input.npy", "output.npy")
         self.image_to_pose_validation_dataset = wds.WebDataset(self.validation_dataset_directory).decode().to_tuple("input.npy", "output.npy")
 
-        self.training_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, drop_last=True)
-        self.validation_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, drop_last=True)
+        self.training_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, num_workers=8, pin_memory=True)
+        self.validation_loader = DataLoader(self.image_to_pose_validation_dataset, batch_size=self.minibatch_size, num_workers=8, pin_memory=True)
 
         # INITIALISE THE NETWORK
         # Set the GPU

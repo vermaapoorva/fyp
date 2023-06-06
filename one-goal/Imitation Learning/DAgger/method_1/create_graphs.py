@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-task_name = 'original_hp_results_scene_0'
-bitbucket = '/vol/bitbucket/av1019/dagger/hyperparameters/'
+task_name = 'final_model_1M_fix_val_lr_0001_bs_128_cutlery_block_scene'
+bitbucket = '/vol/bitbucket/av1019/behavioural-cloning/c2f/'
 
 path = bitbucket + 'Networks/' + str(task_name)
 data_path = path + '/network_training_validation_losses.npz'

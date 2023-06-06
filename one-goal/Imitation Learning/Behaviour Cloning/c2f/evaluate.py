@@ -30,7 +30,7 @@ def run_model(task_name, scene_name, bottleneck, hyperparameters, num_of_runs=10
         done = False
         steps = 0
 
-        while not done:
+        while steps < 100:
             # obs = np.expand_dims(obs, axis=0)
             # normalise obs
             obs = obs / 255.0
@@ -53,7 +53,9 @@ def run_model(task_name, scene_name, bottleneck, hyperparameters, num_of_runs=10
 
     print("Accuracy of model (distance): ", np.mean(distances_to_goal))
     print("Accuracy of model (orientation): ", np.mean(orientation_z_diffs))
+    print("Standard deviation of model (distance): ", np.std(distances_to_goal))
+    print("Standard deviation of model (orientation): ", np.std(orientation_z_diffs))
 
     env.close()
 
-    return np.mean(steps_list), np.mean(distances_to_goal), np.mean(orientation_z_diffs)
+    return np.mean(steps_list), np.mean(distances_to_goal), np.mean(orientation_z_diffs), np.std(distances_to_goal), np.std(orientation_z_diffs)

@@ -27,7 +27,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common import results_plotter
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
-from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, StopTrainingOnRewardThreshold
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, StopTrainingOnRewardThreshold, CheckpointCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
 from stable_baselines3 import PPO
@@ -90,8 +90,10 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
         net_arch=dict(pi=net_arch, qf=net_arch)
     )
 
-    # model = SAC('CnnPolicy', env, seed=seed, buffer_size=buffer_size, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
-    model = SAC.load(f"{logdir}/best_model.zip", env=env, tensorboard_log=tensorboard_log_dir)
+    model = SAC('CnnPolicy', env, seed=seed, buffer_size=buffer_size, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    # model = SAC.load(f"{logdir}/best_model.zip", env=env, tensorboard_log=tensorboard_log_dir)
+
+    scene_name = scene_file_name.split(".")[0]
 
     # Create the callbacks
     eval_callback = EvalCallback(eval_env,
@@ -100,23 +102,31 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
                                     eval_freq=20000,
                                     deterministic=True,
                                     verbose=1)
+    checkpoint_callback = CheckpointCallback(save_freq=31250, save_path=logdir,
+                                         name_prefix=f'final_model_{scene_name}')
 
     # Train the agent for 1.5M timesteps
-    timesteps = 4000000
-    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback])
-    model.learn(total_timesteps=int(timesteps), callback=[eval_callback], reset_num_timesteps=False)
+    timesteps = 10000000
+    model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback])
+    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback], reset_num_timesteps=False)
     model.save(f"{logdir}/final_model.zip")
 
     env.close()
     eval_env.close()
 
-def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
+def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30, amount_of_data=None):
 
     logdir = f"/vol/bitbucket/av1019/SAC/logs/{task_name}/"
 
     env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0, file_name=scene_file_name, bottleneck=bottleneck), logdir)
 
-    model_path = f"{logdir}/best_model.zip"
+    scene_name = scene_file_name.split(".")[0]
+    if amount_of_data is not None:
+        model_path = f"{logdir}final_model_{scene_name}_{amount_of_data}_steps.zip"
+    else:
+        model_path = f"{logdir}best_model.zip"
+
+    print("model path: ", model_path)
     model = SAC.load(model_path, env=env)
 
     total_episodes = 0
@@ -146,7 +156,9 @@ def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
         if not truncated:
             successful_episodes += 1
             print(f"Episode {total_episodes} successful! Distance to goal: {distance_to_goal}. Orientation difference z: {orientation_difference_z}")
-        
+        else:
+            print(f"Episode {total_episodes} unsuccessful! Distance to goal: {distance_to_goal}. Orientation difference z: {orientation_difference_z}")
+
         distances_to_goal.append(distance_to_goal)
         orientation_differences_z.append(orientation_difference_z)
 
