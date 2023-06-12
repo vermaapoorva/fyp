@@ -30,7 +30,7 @@ def run_model(task_name, scene_name, bottleneck, hyperparameters, num_of_runs=10
         done = False
         steps = 0
 
-        while not done:
+        while steps < 100:
             # obs = np.expand_dims(obs, axis=0)
             # normalise obs
             obs = obs / 255.0

@@ -30,8 +30,11 @@ if __name__ == "__main__":
         start = 0
         end = 0
 
-        # file name without .ttt
-        scene_file_name = scene_name[:-4]
+        hyperparameters = [{"net_arch": [32, 64, 128, 256], "learning_rate": 0.001, "batch_size": 256},
+                        {"net_arch": [32, 64, 128, 256], "learning_rate": 0.001, "batch_size": 512},
+                        {"net_arch": [32, 64, 128, 256], "learning_rate": 0.001, "batch_size": 1024},
+                        {"net_arch": [32, 64, 128, 256], "learning_rate": 0.001, "batch_size": 2048},
+                        {"net_arch": [32, 64, 128, 256], "learning_rate": 0.001, "batch_size": 4096}]
 
         amount_of_data = 5000000
 
@@ -40,7 +43,8 @@ if __name__ == "__main__":
         epoch = 5
         checkpoint_path = f"/vol/bitbucket/av1019/behavioural-cloning/c2f/Networks/final_model_5M_fix_val_og_lr_bs_4096_{scene_file_name}/network_checkpoint_epoch_{epoch}.torch"
 
-        print(f"Training on task: {name_of_task}")
+                print(f"Training on scene: {scene_name}, bottleneck: {scene_bottleneck}")
+                print(f"hyperparameters: {hyperparameter}")
 
         trainer = ImageToPoseTrainerCoarse(task_name=name_of_task,
                                         hyperparameters=final_hyperparameters,
@@ -48,9 +52,8 @@ if __name__ == "__main__":
                                         checkpoint_path=checkpoint_path,
                                         starting_epoch=epoch)
 
-        start = time.process_time()
-        trainer.train()
-        end = time.process_time()
+                # file name without .ttt
+                scene_file_name = scene_name[:-4]
 
         distance_errors, orientation_errors = run_model(task_name=name_of_task,
                                                         scene_name=scene_name,
@@ -69,9 +72,33 @@ if __name__ == "__main__":
                         "orientation_errors": orientation_errors,
                         "training_time": end - start})
 
-        # Sort results by orientation error
-        print(results)
+                trainer = ImageToPoseTrainerCoarse(task_name=name_of_task,
+                                                hyperparameters=final_hyperparameters,
+                                                scene_name=scene_file_name)
 
-        # Save results
-        with open(f"/vol/bitbucket/av1019/behavioural-cloning/c2f/{name_of_task}.json", "w") as f:
-                json.dump(results, f, indent=4)
+                start = time.process_time()
+                trainer.train()
+                end = time.process_time()
+
+                average_steps, distance_error, orientation_error = run_model(task_name=name_of_task,
+                                                                scene_name=scene_name,
+                                                                bottleneck=scene_bottleneck,
+                                                                hyperparameters=final_hyperparameters,
+                                                                num_of_runs=50)
+
+                results = []
+                results.append({"scene_name": scene_file_name,
+                                "seed": seed,
+                                "hyperparameters": final_hyperparameters,
+                                "scene_bottleneck": scene_bottleneck,
+                                "average_steps": average_steps,
+                                "distance_error": distance_error,
+                                "orientation_error": orientation_error,
+                                "training_time": end - start})
+
+                # Sort results by orientation error
+                print(results)
+
+                # Save results
+                with open(f"/vol/bitbucket/av1019/behavioural-cloning/c2f/{name_of_task}.json", "w") as f:
+                        json.dump(results, f, indent=4)
