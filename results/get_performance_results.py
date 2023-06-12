@@ -3,13 +3,13 @@ import os
 
 import numpy as np
 
-def get_sac_data():
+def get_sac_data(x_range):
 
-    base_directory = "/vol/bitbucket/av1019/SAC/final_models/results/"    
+    base_directory = "final_results/sac_final_results/"    
 
     data = {}
 
-    for amount_of_data in range(500000, 10500000, 500000):
+    for amount_of_data in x_range:
         for scene in range(0, 5):
             for seed in [1019, 2603, 210423]:
                 file_name = f"{base_directory}actual_final_results_{amount_of_data}_scene_{scene}_seed_{seed}.json"
@@ -42,12 +42,12 @@ def get_sac_data():
                 json.dump(data, f, indent=4)
     return data
 
-def get_ppo_data():
+def get_ppo_data(x_range):
     base_directory = "/vol/bitbucket/av1019/PPO/final_models/results/"    
 
     data = {}
 
-    for amount_of_data in range(500000, 10500000, 500000):
+    for amount_of_data in x_range:
         for scene in range(0, 5):
             for seed in [1019, 2603, 210423]:
                 file_name = f"{base_directory}actual_final_results_{amount_of_data}_scene_{scene}_seed_{seed}.json"
@@ -119,7 +119,7 @@ def get_bc_data():
             json.dump(data, f, indent=4)
     return data
 
-def calculate_mean_std(data, average_over_scenes, file_name):
+def calculate_mean_std(data, average_over_scenes):
     means_all_distances = []
     stds_all_distances = []
     means_all_orientations = []
@@ -153,6 +153,7 @@ def calculate_mean_std(data, average_over_scenes, file_name):
 
         else:
             for scene, errors in scene_errors.items():
+                print(f"scene: {scene}")
                 distances = np.array(errors[0])
                 orientations = np.array(errors[1])
                 mean_distance = np.mean(distances)
@@ -186,55 +187,69 @@ def calculate_mean_std(data, average_over_scenes, file_name):
     stds_all_distances = np.transpose(stds_all_distances)
     stds_all_orientations = np.transpose(stds_all_orientations)
 
-    # create one results and store in npy file
-    results = np.array([means_all_distances, means_all_orientations, stds_all_distances, stds_all_orientations])
-    np.save(file_name, results)
-
     return means_all_distances, means_all_orientations, stds_all_distances, stds_all_orientations
 
-# def format_results(data):
-#     output = ""
-#     for amount_of_data, scene_errors in data.items():
-#         means, stds = calculate_mean_std(scene_errors)
-#         output += f"{amount_of_data}: "
-#         for i, (mean, std) in enumerate(zip(means, stds)):
-#             output += f"{mean[0]:.6f} +- {std[0]:.6f} & {mean[1]:.6f} +- {std[1]:.6f}"
-#             if i < len(means) - 1:
-#                 output += " & "
-#         output += "\n"
-#     return output
+def generate_json_files(data, algo):
+    for avg_over_scenes in [True, False]:
+        for include_purple_block in [True, False]:
 
+            if include_purple_block:
+                include_purple_block_text = ''
+                scenes = [0, 1, 2, 3, 4]
+            else:
+                include_purple_block_text = '_without_purple_block'
+                scenes = [0, 1, 2, 3]
+            
+            if avg_over_scenes:
+                avg_text = 'average_over_scenes'
+            else:
+                avg_text = 'per_scene'
+                scenes = None
+            
+            file_name = f"data_to_plot/{algo}_data_to_graph_{avg_text}{include_purple_block_text}"
 
-with open("sac_final_data.json", 'r') as f:
-    sac_data = json.load(f)
-with open("ppo_final_data.json", 'r') as f:
-    ppo_data = json.load(f)
-with open("bc_final_data.json", 'r') as f:
-    bc_data = json.load(f)
+            # Extract the error statistics from the JSON files
+            means_all_distances, means_all_orientations, stds_all_distances, stds_all_orientations = calculate_mean_std(data, scenes)
+
+            # create one results and store in json file
+            results = {}
+            results['means_all_distances'] = means_all_distances.tolist()
+            results['means_all_orientations'] = means_all_orientations.tolist()
+            results['stds_all_distances'] = stds_all_distances.tolist()
+            results['stds_all_orientations'] = stds_all_orientations.tolist()
+
+            with open(f"{file_name}.json", 'w') as f:
+                json.dump(results, f, indent=4)
+
+def generate_npy_files(algo):
+
+    for avg_over_scenes in [True, False]:
+        for include_purple_block in [True, False]:
+
+            if include_purple_block:
+                include_purple_block_text = ''
+                scenes = [0, 1, 2, 3, 4]
+            else:
+                include_purple_block_text = '_without_purple_block'
+                scenes = [0, 1, 2, 3]
+            
+            if avg_over_scenes:
+                avg_text = 'average_over_scenes'
+            else:
+                avg_text = 'per_scene'
+                scenes = None
+            
+            file_name = f"data_to_plot/{algo}_data_to_graph_{avg_text}{include_purple_block_text}"
+
+            # Extract the error statistics from the JSON files
+            with open(f"{file_name}.json", 'r') as f:
+                data = json.load(f)
+
+            results = np.array([np.array(data['means_all_distances']), np.array(data['means_all_orientations']), np.array(data['stds_all_distances']), np.array(data['stds_all_orientations'])])
+            np.save(f"{file_name}.npy", results)
 
 algo = 'sac'
-for avg_over_scenes in [True, False]:
-    for include_purple_block in [True, False]:
+x_range = [500000*i for i in range(1, 21)]
 
-        if include_purple_block:
-            include_purple_block_text = ''
-            scenes = [0, 1, 2, 3, 4]
-        else:
-            include_purple_block_text = '_without_purple_block'
-            scenes = [0, 1, 2, 3]
-        
-        if avg_over_scenes:
-            avg_text = 'average_over_scenes'
-        else:
-            avg_text = 'per_scene'
-            scenes = None
-        
-        # Extract the error statistics from the JSON files
-        sac_errors = calculate_mean_std(sac_data, scenes, f"{algo}_data_to_graph_{avg_text}{include_purple_block_text}.npy")
-
-
-# # Format the results as a string
-# results_string = format_results(data)
-
-# # Print the results
-# print(results_string)
+data = get_sac_data(x_range)
+generate_json_files(data, algo)
