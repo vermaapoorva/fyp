@@ -4,6 +4,7 @@ import torch.cuda
 from torch.utils.data import DataLoader, Subset
 from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler, BatchSampler
 import matplotlib.pyplot as plt
+import math
 
 from dataset import ImageToPoseDatasetCoarse
 
@@ -38,6 +39,7 @@ class ImageToPoseTrainerCoarse:
 
         self.bitbucket = '/vol/bitbucket/av1019/dagger/hyperparameters/'
         self.task_name = task_name
+        self.hyperparameters = hyperparameters
 
         self.dataset_directory = f'/vol/bitbucket/av1019/dagger/hyperparameters/data/{task_name}/'
 
@@ -79,14 +81,13 @@ class ImageToPoseTrainerCoarse:
         training_indices = indices[:amount_of_training_data]
         validation_indices = indices[amount_of_training_data:]
 
-        training_shard_indices = np.array_split(training_indices, len(training_indices) // 10000)
-        validation_shard_indices = np.array_split(validation_indices, len(validation_indices) // 10000)
+        training_shard_indices = np.array_split(training_indices, math.ceil(len(training_indices) / 10000))
+        validation_shard_indices = np.array_split(validation_indices, math.ceil(len(validation_indices) / 10000))
 
         print("Length of training shard indices: ", len(training_shard_indices))
         print("Length of validation shard indices: ", len(validation_shard_indices))
 
-        # pool = mp.Pool(processes=mp.cpu_count())  # Use multiprocessing pool
-        pool = mp.Pool(processes=16)  # Use multiprocessing pool
+        pool = mp.Pool(processes=mp.cpu_count())  # Use multiprocessing pool
         training_shard_filenames = [f"{self.dataset_directory}training_shards-{training_shards_next_index + i:06d}.tar" for i in range(len(training_shard_indices))]
         validation_shard_filenames = [f"{self.dataset_directory}validation_shards-{validation_shards_next_index + i:06d}.tar" for i in range(len(validation_shard_indices))]
 
@@ -115,10 +116,19 @@ class ImageToPoseTrainerCoarse:
         self.image_to_pose_training_dataset = wds.WebDataset(self.training_dataset_directory).decode().to_tuple("input.npy", "output.npy")
         self.image_to_pose_validation_dataset = wds.WebDataset(self.validation_dataset_directory).decode().to_tuple("input.npy", "output.npy")
 
-        self.training_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, num_workers=12)
-        self.validation_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, num_workers=4)
+        self.training_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, num_workers=8, pin_memory=True)
+        self.validation_loader = DataLoader(self.image_to_pose_validation_dataset, batch_size=self.minibatch_size, num_workers=8, pin_memory=True)
 
         return training_shards_next_index, validation_shards_next_index
+
+    def reset_network(self):
+        self.image_to_pose_network.delete()
+        self.image_to_pose_network = ImageToPoseNetworkCoarse(self.task_name, self.hyperparameters)
+        torch.cuda.set_device('cuda:0')
+        self.image_to_pose_network.cuda()
+        # Define the optimiser
+        self.optimiser = torch.optim.Adam(self.image_to_pose_network.parameters(), lr=self.init_learning_rate)
+        print("Reset network...")
 
     def train(self, iteration):
         print('Training the network...')

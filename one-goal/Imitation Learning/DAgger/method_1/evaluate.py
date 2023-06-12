@@ -56,4 +56,4 @@ def run_model(task_name, scene_name, bottleneck, hyperparameters, num_of_runs=10
 
     env.close()
 
-    return np.mean(steps_list), np.mean(distances_to_goal), np.mean(orientation_z_diffs)
+    return distances_to_goal, orientation_z_diffs

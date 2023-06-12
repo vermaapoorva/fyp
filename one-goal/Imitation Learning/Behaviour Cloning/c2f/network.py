@@ -24,10 +24,15 @@ class Network(torch.nn.Module):
         else:
             torch.save(self.state_dict(), checkpoint_path)
             
-    def load(self):
-        print('Loading network from: ' + str(self.network_path))
-        state_dict = torch.load(self.network_path)
-        self.load_state_dict(state_dict)
+    def load(self, checkpoint_path=None):
+        if checkpoint_path is None:
+            print('Loading network from: ' + str(self.network_path))
+            state_dict = torch.load(self.network_path)
+            self.load_state_dict(state_dict)
+        else:
+            print('Loading network from: ' + str(checkpoint_path))
+            state_dict = torch.load(checkpoint_path)
+            self.load_state_dict(state_dict)
 
     def set_eval_dropout(self):
         self.apply(self.apply_dropout)

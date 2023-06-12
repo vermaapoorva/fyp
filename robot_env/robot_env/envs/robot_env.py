@@ -44,7 +44,8 @@ class RobotEnv(gym.Env):
                  bottleneck,
                  headless=True,
                  image_size=64,
-                 sleep=0,):
+                 sleep=0,
+                 evaluate=False):
         super(RobotEnv, self).__init__()
         self.metadata = {'render_modes': ['rgb_array']}
         print("initialising robot env...")
@@ -54,6 +55,7 @@ class RobotEnv(gym.Env):
 
         self.image_size = image_size
         self.sleep = sleep
+        self.eval = evaluate
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
@@ -202,6 +204,9 @@ class RobotEnv(gym.Env):
         time.sleep(self.sleep)
         if done:
             time.sleep(self.sleep * 100)
+
+        if self.eval:
+            return self._get_state(), reward, False, truncated, {}
 
         return self._get_state(), reward, done, truncated, {}
 

@@ -88,9 +88,9 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
         net_arch=dict(pi=net_arch, vf=net_arch)
     )
 
-    # model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
+    model = PPO('CnnPolicy', env, seed=seed, batch_size=batch_size, n_steps=n_steps, policy_kwargs=policy_kwargs, verbose=1, tensorboard_log=tensorboard_log_dir)
 
-    model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
+    # model = PPO.load(f"{logdir}/best_model", env=env, tensorboard_log=tensorboard_log_dir)
 
     # Create the callbacks
     eval_callback = EvalCallback(eval_env,
@@ -108,17 +108,25 @@ def train(scene_file_name, bottleneck, seed, hyperparameters, task_name):
 
     # Train the agent for 7.5M timesteps
     timesteps = 15000000
-    model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback], reset_num_timesteps=False)
-    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback])
+    # model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback], reset_num_timesteps=False)
+    model.learn(total_timesteps=int(timesteps), callback=[eval_callback, checkpoint_callback])
     model.save(f"{logdir}/final_model.zip")
 
-def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
+def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30, amount_of_data=None):
 
     logdir = f"/vol/bitbucket/av1019/PPO/logs/{task_name}/"
 
     env = Monitor(gym.make("RobotEnv-v2", headless=True, image_size=64, sleep=0, file_name=scene_file_name, bottleneck=bottleneck), logdir)
 
-    model_path = f"{logdir}/best_model.zip"
+    scene_name = scene_file_name.split(".")[0]
+    if amount_of_data is not None:
+        model_path = f"{logdir}final_model_{scene_name}_{amount_of_data}_steps.zip"
+    else:
+        model_path = f"{logdir}best_model.zip"
+
+    print("model path: ", model_path)
+
+    print("model path: ", model_path)
     model = PPO.load(model_path, env=env)
 
     total_episodes = 0
@@ -130,6 +138,7 @@ def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
         done = False
         episode_rewards = []
         total_episodes += 1
+        steps = 0
 
         while not done:
             # pass observation to model to get predicted action
@@ -139,8 +148,7 @@ def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
             obs, reward, done, truncated, info = env.step(action)
             episode_rewards.append(reward)
 
-            # show the environment on the screen
-            env.render()
+            steps += 1
 
         distance_to_goal = env.get_distance_to_goal()
         orientation_difference_z = env.get_orientation_diff_z()
@@ -148,7 +156,9 @@ def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
         if not truncated:
             successful_episodes += 1
             print(f"Episode {total_episodes} successful! Distance to goal: {distance_to_goal}. Orientation difference z: {orientation_difference_z}")
-        
+        else:
+            print(f"Episode {total_episodes} unsuccessful! Distance to goal: {distance_to_goal}. Orientation difference z: {orientation_difference_z}")
+
         distances_to_goal.append(distance_to_goal)
         orientation_differences_z.append(orientation_difference_z)
 
@@ -160,4 +170,4 @@ def run_model(task_name, scene_file_name, bottleneck, num_of_runs=30):
 
     env.close()
 
-    return np.mean(distances_to_goal), np.mean(orientation_differences_z), successful_episodes, successful_episodes / total_episodes * 100
+    return distances_to_goal, orientation_differences_z, successful_episodes, successful_episodes / total_episodes * 100

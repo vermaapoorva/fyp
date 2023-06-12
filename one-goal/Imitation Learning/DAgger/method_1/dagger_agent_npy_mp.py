@@ -9,6 +9,7 @@ import os
 import pickle
 import torch
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -39,10 +40,12 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, start_i
     ##### Create environment #####
     # env = gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck)
 
+    num_of_cores = mp.cpu_count()
+    print("num of cores:", num_of_cores)
     for i in trange(num_dagger_iterations):
 
         env = make_vec_env("RobotEnv-v2",
-                            n_envs=16,
+                            n_envs=num_of_cores,
                             vec_env_cls=SubprocVecEnv,
                             env_kwargs=dict(file_name=scene_file_name, bottleneck=bottleneck))
 
@@ -108,6 +111,9 @@ def train_model(task_name, scene_file_name, bottleneck, hyperparameters, start_i
                                                                                                             validation_shards_next_index=validation_shards_next_index)
 
         ##### Train the model #####
+
+        # Reset network
+        image_to_pose_trainer.reset_network()
 
         image_to_pose_trainer.train(iteration=i)
 

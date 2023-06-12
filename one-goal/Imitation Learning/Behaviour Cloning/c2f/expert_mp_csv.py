@@ -227,19 +227,13 @@ if __name__ == "__main__":
     scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
             ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
             ["bowl_scene.ttt", [-0.074, -0.023, +0.7745, -2.915]],
-            ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
-
-            # ["cutlery_block_scene.ttt", [-0.03, 0.01, 0.768, 0.351]],
-            # ["cutlery_block_scene.ttt", [0.025, -0.045, 0.79, -0.424]]]
-
-    # scenes = [["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
-    #         ["wooden_block_scene.ttt", [-0.0253, 0.0413, 0.791, -2.164]],
-    #         ["wooden_block_scene.ttt", [0.0321, 0.0123, 0.782, -0.262]]]
+            ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]],
+            ["purple_block_scene.ttt", [-0.015, 0.012, 0.720, 1.71042]]]
 
     # Collect 500k samples for each scene
     # num_of_samples = 1000000
     num_of_samples = 500000
-    scene_index = 3
+    scene_index = 4
     run_index = 19
     scene_name = scenes[scene_index][0].split(".")[0]
     task_name = f"{scene_name}_large_translation_noise"

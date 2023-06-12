@@ -1,13 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-task_name = 'tuning_hp_og_patiences_results_scene_5'
+task_name = 'final_model_1M_fix_val_new_params_wooden_block_scene'
 bitbucket = '/vol/bitbucket/av1019/behavioural-cloning/c2f/'
 
 path = bitbucket + 'Networks/' + str(task_name)
 data_path = path + '/network_training_validation_losses.npz'
-img_path = path + '/loss_curve.png'
+img_path = '/homes/av1019/FYP/fyp/results/' + str(task_name) + '_loss_curve.png'
 
 # Load data from the NPZ file
 data = np.load(data_path)

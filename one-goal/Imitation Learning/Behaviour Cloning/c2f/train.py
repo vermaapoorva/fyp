@@ -17,18 +17,17 @@ import pickle
 
 class ImageToPoseTrainerCoarse:
 
-    def __init__(self, task_name, scene_name, hyperparameters):
+    def __init__(self, task_name, scene_name, hyperparameters, checkpoint_path=None, starting_epoch=0):
 
         self.bitbucket = '/vol/bitbucket/av1019/behavioural-cloning/c2f/'
         self.task_name = task_name
-                                                    
+
         self.image_to_pose_network = ImageToPoseNetworkCoarse(task_name, hyperparameters)
+        self.checkpoint_path = checkpoint_path
+        self.starting_epoch = starting_epoch
 
-        self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_large_translation_noise_2_shards-{{000000..000009}}.tar'
-        self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/shards/{scene_name}_large_translation_noise_2_shards-{{000010..000010}}.tar'
-
-        # self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/shards/{scene_name}_12000_train_shards-{{000000..000004}}.tar'
-        # self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data/shards/{scene_name}_12000_train_shards-{{000005..000009}}.tar'
+        self.training_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/final_shards/{scene_name}_large_translation_noise_2_shards-{{000000..000499}}.tar'
+        self.validation_dataset_directory = f'/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_npy/final_shards/{scene_name}_large_translation_noise_2_shards-{{000500..000549}}.tar'
 
         self.minibatch_size = hyperparameters['batch_size']
         self.init_learning_rate = hyperparameters['learning_rate']
@@ -37,13 +36,16 @@ class ImageToPoseTrainerCoarse:
         self.image_to_pose_training_dataset = wds.WebDataset(self.training_dataset_directory).decode().to_tuple("input.npy", "output.npy")
         self.image_to_pose_validation_dataset = wds.WebDataset(self.validation_dataset_directory).decode().to_tuple("input.npy", "output.npy")
 
-        self.training_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, drop_last=True)
-        self.validation_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, drop_last=True)
+        self.training_loader = DataLoader(self.image_to_pose_training_dataset, batch_size=self.minibatch_size, num_workers=8, pin_memory=True)
+        self.validation_loader = DataLoader(self.image_to_pose_validation_dataset, batch_size=self.minibatch_size, num_workers=8, pin_memory=True)
 
         # INITIALISE THE NETWORK
         # Set the GPU
         torch.cuda.set_device('cuda:0')
         self.image_to_pose_network.cuda()
+        # Load the checkpoint if necessary
+        if self.checkpoint_path is not None:
+            self.image_to_pose_network.load(self.checkpoint_path)
         # Define the optimiser
         self.loss_function = torch.nn.MSELoss(reduction='none')
         self.optimiser = torch.optim.Adam(self.image_to_pose_network.parameters(), lr=self.init_learning_rate)
@@ -59,7 +61,7 @@ class ImageToPoseTrainerCoarse:
         min_validation_loss = np.inf
         num_bad_epochs_since_lr_change = 0
         num_bad_epochs = 0
-        epoch_num = 0
+        epoch_num = self.starting_epoch
         while True:
             print('Epoch: ' + str(epoch_num))
             # Increment the epoch num
@@ -173,9 +175,9 @@ class ImageToPoseTrainerCoarse:
                 print('\tTraining loss: ' + str(training_loss) + ', Validation loss: ' + str(validation_loss))
                 print('\tValidation position x error: ' + str(validation_epoch_x_error) + ', Validation position y error: ' + str(validation_epoch_y_error) + ', Validation position z error: ' + str(validation_epoch_z_error) + ', Validation orientation error: ' + str(validation_epoch_theta_error))
 
-                # Save a checkpoint
-                checkpoint_path = self.bitbucket + 'Networks/' + str(self.task_name) + '/network_checkpoint_epoch_' + str(epoch_num) + '.torch'
-                self.image_to_pose_network.save(checkpoint_path)
+            # Save a checkpoint
+            checkpoint_path = self.bitbucket + 'Networks/' + str(self.task_name) + '/network_checkpoint_epoch_' + str(epoch_num) + '.torch'
+            self.image_to_pose_network.save(checkpoint_path)
 
         # Save the error, so it can be used as a prior on uncertainty
         np.save(self.bitbucket + 'Networks/' + str(self.task_name) + '/network_uncertainty_validation_error.npy', min_validation_error)

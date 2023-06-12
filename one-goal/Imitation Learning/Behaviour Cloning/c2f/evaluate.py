@@ -53,7 +53,9 @@ def run_model(task_name, scene_name, bottleneck, hyperparameters, num_of_runs=10
 
     print("Accuracy of model (distance): ", np.mean(distances_to_goal))
     print("Accuracy of model (orientation): ", np.mean(orientation_z_diffs))
+    print("Standard deviation of model (distance): ", np.std(distances_to_goal))
+    print("Standard deviation of model (orientation): ", np.std(orientation_z_diffs))
 
     env.close()
 
-    return np.mean(steps_list), np.mean(distances_to_goal), np.mean(orientation_z_diffs)
+    return distances_to_goal, orientation_z_diffs
