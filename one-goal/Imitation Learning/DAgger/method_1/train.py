@@ -1,3 +1,13 @@
+# This code is adapted from the Course to Fine framework:
+
+# Copyright (c) 2022, Imperial College, London
+
+# Author: Edward Johns
+# Webpage: https://www.robot-learning.uk/coarse-to-fine-imitation-learning
+# Citation: E. Johns. "Coarse-to-Fine Imitation Learning: Robot Manipulation from a Single Demonstration", in Proc. IEEE International Conference on Robotics and Automation (ICRA), 2021.
+
+# All rights reserved.
+
 import numpy as np
 import cv2
 import torch.cuda
@@ -5,11 +15,6 @@ from torch.utils.data import DataLoader, Subset
 from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler, BatchSampler
 import matplotlib.pyplot as plt
 
-from dataset import ImageToPoseDatasetCoarse
-
-# from Common import utils
-# from Common import config
-# from Common import graphs
 from network import ImageToPoseNetworkCoarse
 import webdataset as wds
 

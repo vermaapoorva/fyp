@@ -1,11 +1,18 @@
+# This code is adapted from the Course to Fine framework:
+
+# Copyright (c) 2022, Imperial College, London
+
+# Author: Edward Johns
+# Webpage: https://www.robot-learning.uk/coarse-to-fine-imitation-learning
+# Citation: E. Johns. "Coarse-to-Fine Imitation Learning: Robot Manipulation from a Single Demonstration", in Proc. IEEE International Conference on Robotics and Automation (ICRA), 2021.
+
+# All rights reserved.
+
 import numpy as np
 import torch
 import torchvision
 import cv2
 import torch.nn.functional as F
-
-# from Common import config
-# from Common import utils
 
 import os
 
