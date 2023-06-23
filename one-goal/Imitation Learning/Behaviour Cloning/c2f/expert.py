@@ -69,23 +69,24 @@ def expert_policy(env):
 
 def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, start_index=0):
 
-    # If behavioural cloning directory doesn't exist create it
-    if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning"):
-        os.makedirs("/vol/bitbucket/av1019/behavioural-cloning")
+    # # If behavioural cloning directory doesn't exist create it
+    # if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning"):
+    #     os.makedirs("/vol/bitbucket/av1019/behavioural-cloning")
     
-    # If hyperparameter directory doesn't exist create it
-    if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning/c2f"):
-        os.makedirs("/vol/bitbucket/av1019/behavioural-cloning/c2f")
+    # # If hyperparameter directory doesn't exist create it
+    # if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning/c2f"):
+    #     os.makedirs("/vol/bitbucket/av1019/behavioural-cloning/c2f")
 
-    # If expert_data directory doesn't exist create it
-    if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data"):
-        os.makedirs("/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data")
+    # # If expert_data directory doesn't exist create it
+    # if not os.path.exists("/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data"):
+    #     os.makedirs("/vol/bitbucket/av1019/behavioural-cloning/c2f/expert_data")
 
     print("Collecting data for scene:", scene_file_name)
     print("Bottleneck:", bottleneck)
     print("Number of samples:", num_of_samples)
 
-    logdir = "/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_no_mp/"
+    # logdir = "/vol/bitbucket/av1019/behavioural-cloning/c2f/final_expert_data_no_mp/"
+    logdir = "delete_this_data/"
 
     # If expert_data directory doesn't exist create it
     if not os.path.exists(logdir):
@@ -98,7 +99,7 @@ def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, star
     if not os.path.exists(logdir):
         os.makedirs(logdir)
     
-    env = gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck)
+    env = gym.make("RobotEnv-v2", file_name=scene_file_name, bottleneck=bottleneck, headless=False, image_size=256)
 
     scene_file_name = scene_file_name[:-4]
     # output_file = str(num_of_samples) + "_expert_data_" + scene_file_name + ".pkl"
@@ -217,17 +218,23 @@ def collect_data(task_name, scene_file_name, bottleneck, num_of_samples=20, star
     env.close()
 
 if __name__ == "__main__":
-    scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
-            ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
-            ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
-            ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
-            ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
-            ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
+    # scenes = [["pitcher_scene.ttt", [0.05, 0.001, 0.78, 3.056]],
+    #         ["twist_shape_scene.ttt", [-0.011, -0.023, 0.65, 1.616]],
+    #         ["easter_basket_teal.ttt", [-0.045, 0.072, 0.712, 2.568]],
+    #         ["white_bead_mug.ttt", [-0.043, -0.002, 0.718, -0.538]],
+    #         ["frying_pan_scene.ttt", [0.100, 0.005, 0.675, -2.723]],
+    #         ["milk_frother_scene.ttt", [0.020, -0.025, 0.728, -0.868]]]
+
+    scenes = [["cutlery_block_scene.ttt", [-0.023, -0.08, 0.75, -3.140]],
+            ["wooden_block_scene.ttt", [0.0843, -0.0254, 0.732, 1.100]],
+            ["bowl_scene.ttt", [-0.074, -0.023, 0.7745, -2.915]],
+            ["teapot_scene.ttt", [0.0573, -0.0254, 0.752, 2.871]]]
+            # ["purple_block_scene.ttt", [-0.015, 0.012, 0.720, 1.71042]]]
 
     # Collect 1M samples for each scene
-    num_of_samples = 10000
-    scene_index = 0
-    run_index = 1
+    num_of_samples = 30
+    scene_index = 1
+    run_index = 0
     scene_name = scenes[scene_index][0].split('.')[0]
     task_name = f"{scene_name}_data"
 

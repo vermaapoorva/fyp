@@ -8,6 +8,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from pyrep import PyRep
 from pyrep.objects import VisionSensor, Object, Shape
+from pyrep.const import PrimitiveShape
 from os.path import dirname, join, abspath
 
 import time
@@ -255,6 +256,41 @@ class RobotEnv(gym.Env):
         _, _, tz = self.goal_orientation
         diff = abs(z - tz)
         return min(diff, 2 * np.pi - diff)
+    
+    def draw_distribution(self):
+        self.agent.set_position([0, 0, MAX_HEIGHT])
+        current_height = MAX_HEIGHT
+        shape = 0.01
+        while self.agent.get_position()[2] >= self.goal_pos[2]:
+            current_radius = self.get_current_radius()
+            print("Current radius = ", current_radius)
+            x_range = np.arange(-current_radius, current_radius, shape)
+            y_range = np.arange(-current_radius, current_radius, shape)
+            if x_range[-1] < current_radius:
+                x_range = np.append(x_range, current_radius)
+            if y_range[-1] < current_radius:
+                y_range =np.append(y_range, current_radius)
+            for x in x_range:
+                for y in y_range:
+                    self.pr.step()
+                    self.agent.set_position([x, y, current_height])
+                    self.draw_shape(shape)
+            
+            current_height -= shape
+            self.agent.set_position([0, 0, current_height])
+            self.pr.step()           
+                    
+    def draw_shape(self, shape):
+        current = Shape.create(PrimitiveShape.CUBOID,
+                               size=[shape, shape, shape],
+                               position=self.agent.get_position(),
+                               color=[0, 255, 0])
+        
+        current.set_dynamic(False)
+        current.set_renderable(False)
+        current.set_collidable(False)
+        current.set_detectable(False)
+
 
     def get_current_radius(self, initial=False):
         min_height = self.goal_pos[2]

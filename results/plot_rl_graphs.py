@@ -9,10 +9,14 @@ from itertools import groupby
 import pandas as pd
 
 scenes = ["Cutlery Block", "Wooden Block", "Bowl", "Teapot", "Purple Block"]
-# scenes = ["1000", "10000", "100000", "250000"]
-# scenes = ["[32, 64, 128]", "[32, 64, 64, 128]", "[128, 128]", "[128, 128, 128]", "[64, 128, 256]", "[32, 64, 128, 256]"]
+algo_names = ["PPO", "SAC"]
 
-def smooth(scalars, weight=0.97):
+AXIS_TEXT_SIZE = 28
+GENERAL_TEXT_SIZE = 28
+
+palette = sns.color_palette("tab10", n_colors=6)
+
+def smooth(scalars, weight=0.8):
     """
     EMA implementation according to
     https://github.com/tensorflow/tensorboard/blob/34877f15153e1a2087316b9952c931807a122aa7/tensorboard/components/vz_line_chart2/line-chart.ts#L699
@@ -43,6 +47,7 @@ def get_data_from_tensorboard(labels, base_directory, algo, tag_to_plot):
     
         # if path does not exist, skip
         if not os.path.exists(subdir_path):
+            print("Skipping path: ", subdir_path)
             continue
 
         # Create an EventAccumulator and load the events
@@ -79,6 +84,10 @@ def get_data_from_tensorboard(labels, base_directory, algo, tag_to_plot):
 
                 print(f"Added data for {label}")
 
+    # Save steps to npy file
+    type_of_plot = "rew" if "rew" in tag_to_plot else "len"
+    np.save(f"{algo}_{type_of_plot}_data.npy", np.array(steps_values_to_plot))
+
     return steps_values_to_plot
 
 def group_func(x, avg_over_scenes):
@@ -87,25 +96,19 @@ def group_func(x, avg_over_scenes):
     else:
         return x["scene"]
 
-def plot_tensorboard_graphs(base_directory, labels, name_of_graph, algo, tag_to_plot='rollout/ep_rew_mean', avg_over_scenes=False):
-    # Create lists to store the data
-    rollout_data = []
-    ep_len_reward_data = []
-
+def create_graph():
     plt.figure(figsize=(15, 12), tight_layout=True)
-    plt.rc('axes', titlesize=24)     # fontsize of the axes title
-    plt.rc('axes', labelsize=24)    # fontsize of the x and y labels
-    plt.rc('xtick', labelsize=20)    # fontsize of the tick labels
-    plt.rc('ytick', labelsize=20)    # fontsize of the tick labels
-    plt.rc('legend', fontsize=20)    # legend fontsize
-    plt.rc('font', size=20)          # controls default text sizes
+    plt.rc('axes', titlesize=AXIS_TEXT_SIZE)     # fontsize of the axes title
+    plt.rc('axes', labelsize=AXIS_TEXT_SIZE)    # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=GENERAL_TEXT_SIZE-4)    # fontsize of the tick labels
+    plt.rc('ytick', labelsize=GENERAL_TEXT_SIZE-4)    # fontsize of the tick labels
+    plt.rc('legend', fontsize=GENERAL_TEXT_SIZE)    # legend fontsize
+    plt.rc('font', size=GENERAL_TEXT_SIZE)          # controls default text sizes
 
     # sns.set_style('dark')
     sns.despine()
-    palette = sns.color_palette("tab10", n_colors=6)
-    print("palette: ", palette)
 
-    steps_values_to_plot = get_data_from_tensorboard(labels, base_directory, algo, tag_to_plot)
+def plot_tensorboard_graphs(avg_over_scenes=False, steps_values_to_plot=None, algo=None, algo_num=0):
 
     scene_i = 0
     # Plot the data average over seeds
@@ -118,46 +121,6 @@ def plot_tensorboard_graphs(base_directory, labels, name_of_graph, algo, tag_to_
             steps = g["steps"]
             values = g["values"]
 
-            # Get index of step where value is > 10M
-            # max_index = next((i for i in range(0, len(steps)) if steps[i] > 7000000), None)
-            # if max_index is not None:
-            #     steps = steps[:max_index]
-            #     values = values[:max_index]
-
-            # # Find indices of duplicates in steps
-            # _, unique_indices = np.unique(steps, return_index=True)
-            # duplicate_indices = np.setdiff1d(np.arange(len(steps)), unique_indices)
-
-            # # Remove duplicates from steps and values arrays
-            # steps = np.delete(steps, duplicate_indices)
-            # values = np.delete(values, duplicate_indices)
-            # print("Steps after removing duplicates:", steps)
-
-            # if len(steps) < 200:
-            #     diff = 200 - len(steps)
-            #     extras = steps[-diff:]
-            #     steps = np.append(steps, extras)
-                
-            #     diff = 200 - len(values)
-            #     extras = values[-diff:]
-            #     values = np.append(values, extras)
-
-            # # Calculate the step size
-            # skip = int(np.round(len(steps) / 200))
-
-            # # Remove elements at regular intervals
-            # steps = steps[::skip]
-            # values = values[::skip]
-
-            # if len(steps) < 200:
-            #     diff = 200 - len(steps)
-            #     extras = steps[-diff:]
-            #     steps = np.append(steps, extras)
-                
-            #     diff = 200 - len(values)
-            #     extras = values[-diff:]
-            #     values = np.append(values, extras)
-
             all_steps.append(steps)
             all_values.append(values)
 
@@ -167,7 +130,7 @@ def plot_tensorboard_graphs(base_directory, labels, name_of_graph, algo, tag_to_
         all_values = [x[:min_length] for x in all_values]
 
         # smooth each elem in values arrays
-        all_values_smoothed = np.array([smooth(x, 0.99) for x in all_values])
+        all_values_smoothed = np.array([smooth(x) for x in all_values])
 
         all_data = all_steps[0:1]
         all_data = np.append(all_data, all_values_smoothed, axis=0)
@@ -181,7 +144,8 @@ def plot_tensorboard_graphs(base_directory, labels, name_of_graph, algo, tag_to_
         data_to_plot = data_to_plot.melt('x', var_name='cols', value_name='vals')
 
         if avg_over_scenes:
-            label=None
+            label=algo_names[algo_num]
+            colour = palette[algo_num]
         else:
             label=scenes[scene_i]
 
@@ -189,36 +153,60 @@ def plot_tensorboard_graphs(base_directory, labels, name_of_graph, algo, tag_to_
 
         scene_i += 1
 
+def complete_graph(tag_to_plot, name_of_graph):
+
     plt.xlabel('Timestep')
     plt.ylabel('Episode Length' if tag_to_plot == 'rollout/ep_len_mean' else 'Episode Reward')
     # plt.title('Episode Rewards')
     sns.despine()
     # plt.legend(title="Network architecture" if not avg_over_scenes else None)
     # Clip the graph to the first 10 million timesteps
-    plt.xlim(0, 3000000)
+    plt.xlim(0, 2000000)
+    # legent bottom right
+    # plt.legend(loc='lower right')
     plt.savefig(name_of_graph)
     plt.show()
 
+# labels = [[i, j, f'final_model_scene_{i}_seed_{j}'] for i in range(5) for j in [1019, 2603, 210423]]
+# labels = [[i, j, f'final_model_with_checkpoints_scene_{i}_seed_{j}'] for i in range(5) for j in [1019, 2603, 210423]]
+# Set the directory containing the subdirectories with events files
+# base_directory = f'/home/apoorva/Documents/FYP/results/rl_tensorboard_logs/{algo}/'
 
-algo = 'SAC'
+# get_data_from_tensorboard(labels, base_directory, algo, tag_to_plot='rollout/ep_len_mean' if type_of_graph == 'len' else 'rollout/ep_rew_mean')
+
+algos = ['SAC']
 type_of_graph = 'rew'
 avg_over_scenes = False
+include_purple_block = True
 if avg_over_scenes:
     avg_text = 'average_over_scenes'
 else:
     avg_text = 'per_scene'
-
-# Set the directory containing the subdirectories with events files
-base_directory = f'/vol/bitbucket/av1019/{algo}/tensorboard_logs/'
-
-# Define the labels for the plots
-labels = [[i, j, f'final_model_with_checkpoints_scene_{i}_seed_{j}'] for i in range(5) for j in [1019, 2603, 210423]]
-# labels = [[i, j, f'net_arch_{i}_scene_{j}'] for i in range(6) for j in range(6)]
+if include_purple_block:
+    purple_text = ''
+else:
+    purple_text = '_without_purple_block'
 
 # Plot the graphs
-plot_tensorboard_graphs(base_directory=base_directory,
-                        labels=labels,
-                        name_of_graph=f'{algo}_final_3M_{avg_text}_{type_of_graph}.png',
-                        algo=algo,
-                        tag_to_plot='rollout/ep_rew_mean' if type_of_graph == 'rew' else 'rollout/ep_len_mean',
-                        avg_over_scenes=avg_over_scenes)
+create_graph()
+
+for algo_num, algo in enumerate(algos):
+
+    # Read steps_values_to_plot from file
+    with open(f"{algo}_{type_of_graph}_data{purple_text}.npy", "rb") as f:
+        steps_values_to_plot = np.load(f, allow_pickle=True)
+
+    # make it a list
+    steps_values_to_plot = steps_values_to_plot.tolist()
+
+    plot_tensorboard_graphs(avg_over_scenes=avg_over_scenes,
+                            steps_values_to_plot=steps_values_to_plot,
+                            algo=algo,
+                            algo_num=algo_num)
+
+algo_string = ''
+for algo in algos:
+    algo_string += f'{algo}_'
+
+complete_graph(tag_to_plot='rollout/ep_rew_mean' if type_of_graph == 'rew' else 'rollout/ep_len_mean',
+                name_of_graph=f'{algo_string}_final_2M_{avg_text}_{type_of_graph}.png')
